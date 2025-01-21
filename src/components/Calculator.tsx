@@ -1,17 +1,81 @@
 import { useState } from "react";
+import { calcDeliv, calcSmallOrder, calcTotal } from "../utils/calculations";
+import { fetchVenueStaticData, fetchVenueDynamicData } from "../services/api";
+import InputFields from "./InputFields";
+import PriceBreakdown from "./PriceBreakdown";
 
 const Calculator: React.FC = () => {
-  const [venueSlug, setVenueSlug] = useState("home-assignment-venue-helsinki");
-  const [cartValue, setCartValue] = useState("0");
-  const [userLatitude, setUserLatitude] = useState("0000");
-  const [userLongitude, setUserLongitude] = useState("00000");
-  const [priceBreakdown, setPriceBreakdown] = useState({
-    cartValue: "0,00 €",
-    deliveryFee: "0,00 €",
-    deliveryDistance: "0 m",
-    smallOrderSurcharge: "0,00 €",
-    totalPrice: "0,00 €",
+  const [venueSlug, setVenueSlug] = useState<string>("");
+  const [cartValue, setCartValue] = useState<number | "">("");
+  const [coordinates, setCoordinates] = useState<{
+    lat: number | "";
+    lng: number | "";
+  }>({
+    lat: "",
+    lng: "",
   });
+  //   const [priceBreakdown, setPriceBreakdown] = useState({
+  //     cartValue: "0,00 €",
+  //     deliveryFee: "0,00 €",
+  //     deliveryDistance: "0 m",
+  //     smallOrderSurcharge: "0,00 €",
+  //     totalPrice: "0,00 €",
+  //   });
+  const [surcharge, setSurcharge] = useState<number>(0);
+  const [deliveryFee, setDeliveryFee] = useState<number>(0);
+  const [totalPrice, setTotalPrice] = useState<number>(0);
+
+  const handleLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoordinates({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+      }
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !venueSlug ||
+      cartValue === "" ||
+      userLatitude === "" ||
+      userLongitude === ""
+    ) {
+      alert("Please enter a venue slug.");
+      return;
+    }
+
+    try {
+      const staticData = await fetchVenueStaticData(venueSlug);
+      const dynamicData = await fetchVenueDynamicData(venueSlug);
+      //   const restaurantCoordinates = {
+      //     lat: staticData.location.lat,
+      //     lng: staticData[0],
+      //   };
+
+      setVenueSlug(staticData.venue.name);
+      setCartValue(staticData.order_minimum || 0);
+      const calcSurcharge = calcSmallOrder(cartValue as number);
+      const calcDeliveryFee = calcDeliv(dynamicData.delivery_distance);
+      const calcTotalPrice = calcTotal(
+        cartValue as number,
+        calcSurcharge,
+        calcDeliveryFee
+      );
+
+      setSurcharge(calcSurcharge);
+      setDeliveryFee(calcDeliveryFee);
+      setTotalPrice(calcTotalPrice);
+    } catch (error) {
+      console.error("Error fetching venue data:", error);
+    }
+  };
 
   return (
     <div className="max-w-lg mx-auto p-6 bg-white shadow-sm">
@@ -19,62 +83,25 @@ const Calculator: React.FC = () => {
         Delivery Order Price Calculator
       </h1>
 
-      <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Details</h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block mb-1">Venue slug</label>
-            <input
-              type="text"
-              data-test-id="venueSlug"
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1">Cart value (EUR)</label>
-            <input
-              type="number"
-              data-test-id="cartValue"
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1">User latitude</label>
-            <input
-              type="number"
-              data-test-id="userLatitude"
-              className="w-full p-2 border border-gray-300 rounded"
-              step="any"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1">User longitude</label>
-            <input
-              type="number"
-              data-test-id="userLongitude"
-              className="w-full p-2 border border-gray-300 rounded"
-              step="any"
-            />
-          </div>
-
-          <button
-            data-test-id="getLocation"
-            className="w-full p-2 border border-gray-300 rounded hover:bg-gray-50"
-          >
-            Get location
-          </button>
-
-          <button className="w-full p-2 border border-gray-300 rounded hover:bg-gray-50">
-            Calculate delivery price
-          </button>
-        </div>
-      </div>
+      <form action="">
+        <InputFields
+          venueSlug={venueSlug}
+          setVenueSlug={setVenueSlug}
+          cartValue={cartValue}
+          setCartValue={setCartValue}
+          latitude={coordinates.lat}
+          setLatitude={(lat) => setCoordinates((prev) => ({ ...prev, lat }))}
+          longitude={coordinates.lng}
+          setLongitude={(lng) => setCoordinates((prev) => ({ ...prev, lng }))}
+          handleLocation={handleLocation}
+        />
+      </form>
 
       <div>
+        <PriceBreakdown />
+      </div>
+
+      {/* <div>
         <h2 className="text-xl font-bold mb-4">Price breakdown</h2>
         <div className="space-y-2">
           <div className="flex justify-between">
@@ -98,7 +125,7 @@ const Calculator: React.FC = () => {
             <span data-raw-value="1190">{priceBreakdown.totalPrice}</span>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
