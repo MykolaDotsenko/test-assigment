@@ -14,13 +14,14 @@ const Calculator: React.FC = () => {
     lat: "",
     lng: "",
   });
-  //   const [priceBreakdown, setPriceBreakdown] = useState({
-  //     cartValue: "0,00 €",
-  //     deliveryFee: "0,00 €",
-  //     deliveryDistance: "0 m",
-  //     smallOrderSurcharge: "0,00 €",
-  //     totalPrice: "0,00 €",
-  //   });
+  const [venueCoordinates, setVenueCoordinates] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const [deliveryDistance, setDeliveryDistance] = useState<number>(0);
+  const [orederMinimum, setOrderMinimum] = useState<number>(0);
+
   const [surcharge, setSurcharge] = useState<number>(0);
   const [deliveryFee, setDeliveryFee] = useState<number>(0);
   const [totalPrice, setTotalPrice] = useState<number>(0);
@@ -39,14 +40,18 @@ const Calculator: React.FC = () => {
     );
   };
 
+  const isFormValid = (): boolean => {
+    return (
+      venueSlug !== "" &&
+      cartValue !== "" &&
+      coordinates.lat !== "" &&
+      coordinates.lng !== ""
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !venueSlug ||
-      cartValue === "" ||
-      userLatitude === "" ||
-      userLongitude === ""
-    ) {
+    if (!isFormValid()) {
       alert("Please enter a venue slug.");
       return;
     }
@@ -59,12 +64,23 @@ const Calculator: React.FC = () => {
       //     lng: staticData[0],
       //   };
 
-      setVenueSlug(staticData.venue.name);
-      setCartValue(staticData.order_minimum || 0);
+      setVenueCoordinates({ lat, lng });
+      setOrderMinimum(dynamicData.venue_raw.delivery_specs.order_minimum);
+      const distance = calcDistance(
+        coordinates.lat as number,
+        coordinates.lng as number,
+        staticData.location.lat,
+        staticData.location.lng
+      );
+      setDeliveryDistance(distance);
+      const adjustedCart = Math.max(
+        cartValue as number,
+        staticData.order_minimum || 0
+      );
       const calcSurcharge = calcSmallOrder(cartValue as number);
       const calcDeliveryFee = calcDeliv(dynamicData.delivery_distance);
       const calcTotalPrice = calcTotal(
-        cartValue as number,
+        adjustedCart,
         calcSurcharge,
         calcDeliveryFee
       );
@@ -83,7 +99,7 @@ const Calculator: React.FC = () => {
         Delivery Order Price Calculator
       </h1>
 
-      <form action="">
+      <form onSubmit={handleSubmit} action="">
         <InputFields
           venueSlug={venueSlug}
           setVenueSlug={setVenueSlug}
@@ -98,7 +114,12 @@ const Calculator: React.FC = () => {
       </form>
 
       <div>
-        <PriceBreakdown />
+        <PriceBreakdown
+          cartValue={cartValue as number}
+          surcharge={surcharge}
+          deliveryFee={deliveryFee}
+          totalPrice={totalPrice}
+        />
       </div>
 
       {/* <div>
