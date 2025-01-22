@@ -64,7 +64,11 @@ const Calculator: React.FC = () => {
       //     lng: staticData[0],
       //   };
 
-      setVenueCoordinates({ lat, lng });
+      const restaurantLan = staticData.venue_raw.location.coordinates[1];
+      const restaurantLan = staticData.venue_raw.location.coordinates[0];
+
+
+      setVenueCoordinates({ lat: restaurantLan, lng });
       setOrderMinimum(dynamicData.venue_raw.delivery_specs.order_minimum);
       const distance = calcDistance(
         coordinates.lat as number,
