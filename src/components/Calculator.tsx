@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { calcDeliv, calcSmallOrder, calcTotal } from "../utils/calculations";
+import {
+  calcDeliveryFee,
+  calcSmallOrderSurcharge,
+  calcTotal,
+} from "../utils/calculations";
 import { fetchVenueStaticData, fetchVenueDynamicData } from "../services/api";
 import InputFields from "./InputFields";
 import PriceBreakdown from "./PriceBreakdown";
+import { calculateDistance } from "../utils/disstance";
 
 const Calculator: React.FC = () => {
   const [venueSlug, setVenueSlug] = useState<string>("");
@@ -64,34 +69,38 @@ const Calculator: React.FC = () => {
       //     lng: staticData[0],
       //   };
 
-      const restaurantLan = staticData.venue_raw.location.coordinates[1];
-      const restaurantLan = staticData.venue_raw.location.coordinates[0];
+      const restaurantLan =
+        staticData.venue.delivery_geo_range.coordinates[0][0][1];
+      const restaurantLng =
+        staticData.venue.delivery_geo_range.coordinates[0][0][0];
 
-
-      setVenueCoordinates({ lat: restaurantLan, lng });
-      setOrderMinimum(dynamicData.venue_raw.delivery_specs.order_minimum);
-      const distance = calcDistance(
+      setVenueCoordinates({ lat: restaurantLan, lng: restaurantLng });
+      const orederMinimum = staticData.venue.order_minimum;
+      setOrderMinimum(orederMinimum);
+      const distance = calculateDistance(
         coordinates.lat as number,
         coordinates.lng as number,
         staticData.location.lat,
         staticData.location.lng
       );
       setDeliveryDistance(distance);
-      const adjustedCart = Math.max(
+
+      const surcharge = calcSmallOrderSurcharge(
         cartValue as number,
-        staticData.order_minimum || 0
-      );
-      const calcSurcharge = calcSmallOrder(cartValue as number);
-      const calcDeliveryFee = calcDeliv(dynamicData.delivery_distance);
-      const calcTotalPrice = calcTotal(
-        adjustedCart,
-        calcSurcharge,
-        calcDeliveryFee
+        orederMinimum
       );
 
-      setSurcharge(calcSurcharge);
-      setDeliveryFee(calcDeliveryFee);
-      setTotalPrice(calcTotalPrice);
+      const deliveryFee = calcDeliveryFee(
+        dynamicData.venue_raw.delivery_specs.original_delivery_price,
+        distance,
+        dynamicData.venue_raw.delivery_specs.delivery_pricing.distance_ranges
+      );
+
+      const totalPrice = calcTotal(cartValue as number, deliveryFee, surcharge);
+
+      setSurcharge(surcharge);
+      setDeliveryFee(deliveryFee);
+      setTotalPrice(totalPrice);
     } catch (error) {
       console.error("Error fetching venue data:", error);
     }
@@ -122,6 +131,7 @@ const Calculator: React.FC = () => {
           cartValue={cartValue as number}
           surcharge={surcharge}
           deliveryFee={deliveryFee}
+          deliveryDistance={deliveryDistance}
           totalPrice={totalPrice}
         />
       </div>

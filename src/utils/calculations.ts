@@ -3,6 +3,13 @@ export const calcSmallOrder = (cartValue: number): number => {
   return cartValue < MIN_CART_VALUE ? MIN_CART_VALUE - cartValue : 0;
 };
 
+export const calcSmallOrderSurcharge = (
+  cartValue: number,
+  minOrderValue: number
+): number => {
+  return cartValue < minOrderValue ? minOrderValue - cartValue : 0;
+};
+
 export const calcDeliv = (distance: number): number => {
   const MIN_DELIVERY_DISTANCE = 1000;
   const BASE_FEE = 2;
@@ -18,6 +25,18 @@ export const calcDeliv = (distance: number): number => {
   return BASE_FEE + extraFee;
 };
 
+export const calcDeliveryFee = (
+  basePrice: number,
+  distance: number,
+  distanceRange: []
+): number => {
+  for (const range of distanceRange) {
+    if (distance >= range.min && (range.max === 0 || distance < range.max)) {
+      return basePrice + range.a + Math.round((range.b * distance) / 10);
+    }
+  }
+  return -1;
+};
 
 export const calcTotal = (
   cartValue: number,

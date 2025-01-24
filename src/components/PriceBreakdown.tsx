@@ -5,14 +5,18 @@ const PriceBreakdown: FC<PriceBreakdownProps> = ({
   cartValue,
   surcharge,
   deliveryFee,
+  deliveryDistance,
   totalPrice,
 }) => {
   return (
     <div>
-      <p>Sum {cartValue} EUR</p>
-      <p>surcharge {surcharge}</p>
-      <p>delivery {deliveryFee}</p>
-      <p>total {totalPrice}</p>
+      <p data-raw-value={cartValue}>Cart Value: {cartValue / 100}</p>
+      <p data-raw-value={surcharge}>Small Order: {cartValue / 100}</p>
+      <p data-raw-value={deliveryFee}>Delivery fee: {cartValue / 100}</p>
+      <p data-raw-value={deliveryDistance}>
+        delivery distance: {cartValue / 100}
+      </p>
+      <p data-raw-value={totalPrice}>total price: {cartValue / 100}</p>
     </div>
   );
 };

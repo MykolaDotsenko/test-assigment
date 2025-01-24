@@ -15,4 +15,5 @@ export interface PriceBreakdownProps {
   surcharge: number;
   deliveryFee: number;
   totalPrice: number;
+  deliveryDistance: number;
 }
