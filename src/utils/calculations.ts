@@ -1,47 +1,29 @@
-export const calcSmallOrder = (cartValue: number): number => {
-  const MIN_CART_VALUE = 10;
-  return cartValue < MIN_CART_VALUE ? MIN_CART_VALUE - cartValue : 0;
-};
+import { DistanceRange } from "../types/type";
 
-export const calcSmallOrderSurcharge = (
+
+export function calcSmallOrderSurcharge(
   cartValue: number,
-  minOrderValue: number
-): number => {
-  return cartValue < minOrderValue ? minOrderValue - cartValue : 0;
-};
+  orderMin: number
+): number {
+  return Math.max(0, orderMin - cartValue);
+}
 
-export const calcDeliv = (distance: number): number => {
-  const MIN_DELIVERY_DISTANCE = 1000;
-  const BASE_FEE = 2;
-  const DELIVERY_FEE_PER_KM = 1;
-
-  if (distance <= MIN_DELIVERY_DISTANCE) {
-    return BASE_FEE;
-  }
-
-  const extraDistance = distance - MIN_DELIVERY_DISTANCE;
-  const extraFee = Math.ceil(extraDistance / 500) * DELIVERY_FEE_PER_KM;
-
-  return BASE_FEE + extraFee;
-};
-
-export const calcDeliveryFee = (
+export function calcDeliveryFee(
   basePrice: number,
   distance: number,
-  distanceRange: []
-): number => {
-  for (const range of distanceRange) {
-    if (distance >= range.min && (range.max === 0 || distance < range.max)) {
-      return basePrice + range.a + Math.round((range.b * distance) / 10);
+  distanceRanges: DistanceRange[]
+): number {
+  //correct range
+  for (const range of distanceRanges) {
+    const upperBound = range.max === 0 ? Number.MAX_SAFE_INTEGER : range.max;
+    if (distance >= range.min && distance < upperBound) {
+      const distanceComponent = Math.round((range.b * distance) / 10);
+      return basePrice + range.a + distanceComponent;
     }
   }
   return -1;
-};
+}
 
-export const calcTotal = (
-  cartValue: number,
-  deliveryFee: number,
-  surcharge: number
-): number => {
+export function calcTotal(cartValue: number, deliveryFee: number, surcharge: number) {
   return cartValue + deliveryFee + surcharge;
-};
+}

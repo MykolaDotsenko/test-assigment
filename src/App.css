@@ -1,52 +1,71 @@
+/* src/App.css */
+
+/* Overall page container (assuming you have .App in App.tsx) */
 .App {
+  max-width: 720px;
+  margin: 2rem auto;
   font-family: Arial, sans-serif;
-  max-width: 600px;
-  margin: auto;
-  padding: 20px;
+  color: #333;
+}
+
+/* Headings */
+.App h1,
+.App h2 {
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 0.5rem;
+}
+
+/* The "Details" box with a border/padding */
+.details-box {
   border: 1px solid #ccc;
-  border-radius: 10px;
+  padding: 1rem;
 }
 
-.details, .price-breakdown {
-  margin-bottom: 20px;
+/* The subheading (H3 inside details box) */
+.details-box h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 
-h1 {
-  text-align: center;
+/* The "Price breakdown" box */
+.breakdown-box {
+  border: 1px solid #ccc;
+  padding: 1rem;
 }
 
-h2 {
-  border-bottom: 1px solid #ccc;
-  padding-bottom: 5px;
-}
-
-label {
+/* Minimal spacing for form controls */
+form label {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
 }
 
-input {
+form input {
+  display: block;
+  margin-bottom: 0.8rem;
+  padding: 0.4rem;
   width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  box-sizing: border-box;
 }
 
-button {
-  margin-top: 10px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  background-color: #007BFF;
-  color: white;
+form button {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: #fff;
+  border: 1px solid #007bff;
+  border-radius: 4px;
   cursor: pointer;
 }
 
-button:hover {
+form button:hover {
   background-color: #0056b3;
 }
 
-.price-breakdown p {
-  margin: 5px 0;
+/* Error message styling (from your <ErrorMessage> if you want) */
+.error-message {
+  color: red;
+  margin: 1rem 0;
 }

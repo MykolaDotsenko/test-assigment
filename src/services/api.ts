@@ -1,16 +1,34 @@
 import axios from "axios";
+import { VenueStaticData, VenueDynamicData } from "../types/type";
 
 const BASE_URL =
   "https://consumer-api.development.dev.woltapi.com/home-assignment-api/v1/venues";
 
-export const fetchVenueStaticData = async (venueSlug: string) => {
-  const response = await axios.get(`${BASE_URL}/${venueSlug}/static`);
-  console.log("The FETCH STATIC output:", response.data);
-  return response.data.venue_raw.location.coordinates;
-};
+const apiClient = axios.create({
+  baseURL: BASE_URL,
+  timeout: 5000,
+});
 
-export const fetchVenueDynamicData = async (venueSlug: string) => {
-  const response = await axios.get(`${BASE_URL}/${venueSlug}/dynamic`);
-  console.log("The FETCH DYNAMIC output:", response.data);
-  return response.data.venue_raw.delivery_specs;
-};
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error);
+    return Promise.reject(error);
+  }
+);
+
+// fetch venue static data
+export async function fetchVenueStaticData(
+  venueSlug: string
+): Promise<VenueStaticData> {
+  const response = await apiClient.get(`/${venueSlug}/static`);
+  return response.data;
+}
+
+// fetch venue dynamic data
+export async function fetchVenueDynamicData(
+  venueSlug: string
+): Promise<VenueDynamicData> {
+  const response = await apiClient.get(`/${venueSlug}/dynamic`);
+  return response.data;
+}

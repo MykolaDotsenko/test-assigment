@@ -1,166 +1,158 @@
-import { useState } from "react";
-import {
-  calcDeliveryFee,
-  calcSmallOrderSurcharge,
-  calcTotal,
-} from "../utils/calculations";
-import { fetchVenueStaticData, fetchVenueDynamicData } from "../services/api";
+import React, { useState } from "react";
 import InputFields from "./InputFields";
 import PriceBreakdown from "./PriceBreakdown";
-import { calculateDistance } from "../utils/disstance";
+import ErrorMessage from "./ErrorMessage";
+import { fetchVenueStaticData, fetchVenueDynamicData } from "../services/api";
+import {
+  calcSmallOrderSurcharge,
+  calcDeliveryFee,
+  calcTotal,
+} from "../utils/calculations";
+import { calculateDistance } from "../utils/distance";
 
 const Calculator: React.FC = () => {
   const [venueSlug, setVenueSlug] = useState<string>("");
   const [cartValue, setCartValue] = useState<number | "">("");
-  const [coordinates, setCoordinates] = useState<{
-    lat: number | "";
-    lng: number | "";
-  }>({
-    lat: "",
-    lng: "",
-  });
-  const [venueCoordinates, setVenueCoordinates] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+  const [latitude, setLatitude] = useState<number | "">("");
+  const [longitude, setLongitude] = useState<number | "">("");
 
-  const [deliveryDistance, setDeliveryDistance] = useState<number>(0);
-  const [orederMinimum, setOrderMinimum] = useState<number>(0);
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+  const [apiError, setApiError] = useState("");
 
-  const [surcharge, setSurcharge] = useState<number>(0);
-  const [deliveryFee, setDeliveryFee] = useState<number>(0);
-  const [totalPrice, setTotalPrice] = useState<number>(0);
+  const [deliveryDistance, setDeliveryDistance] = useState(0);
+  const [surcharge, setSurcharge] = useState(0);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0);
 
+ 
   const handleLocation = () => {
+    if (!navigator.geolocation) {
+      setApiError("Geolocation not supported by your browser.");
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCoordinates({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
+      (pos) => {
+        setLatitude(pos.coords.latitude);
+        setLongitude(pos.coords.longitude);
       },
-      (error) => {
-        console.error("Error getting location:", error);
+      () => {
+        setApiError("Failed to get your location.");
       }
     );
   };
 
-  const isFormValid = (): boolean => {
-    return (
-      venueSlug !== "" &&
-      cartValue !== "" &&
-      coordinates.lat !== "" &&
-      coordinates.lng !== ""
-    );
+ 
+  const validateForm = (): boolean => {
+    const newErrors: { [key: string]: string } = {};
+    if (!venueSlug.trim()) newErrors.venueSlug = "Venue slug is required.";
+    if (cartValue === "") newErrors.cartValue = "Cart value is required.";
+    if (latitude === "") newErrors.latitude = "Latitude is required.";
+    if (longitude === "") newErrors.longitude = "Longitude is required.";
+
+    setFieldErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  
+  const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid()) {
-      alert("Please enter a venue slug.");
-      return;
-    }
+    setFieldErrors({});
+    setApiError("");
+    setDeliveryDistance(0);
+    setSurcharge(0);
+    setDeliveryFee(0);
+    setTotalPrice(0);
+
+    if (!validateForm()) return;
 
     try {
-      const staticData = await fetchVenueStaticData(venueSlug);
-      const dynamicData = await fetchVenueDynamicData(venueSlug);
-      //   const restaurantCoordinates = {
-      //     lat: staticData.location.lat,
-      //     lng: staticData[0],
-      //   };
+      // 1) static -> venue coords
+      const staticRes = await fetchVenueStaticData(venueSlug);
+      const [venueLng, venueLat] = staticRes.venue_raw.location.coordinates;
 
-      const restaurantLan =
-        staticData.venue.delivery_geo_range.coordinates[0][0][1];
-      const restaurantLng =
-        staticData.venue.delivery_geo_range.coordinates[0][0][0];
+      // 2) dynamic -> order_min_no_surcharge, basePrice, distanceRanges
+      const dynamicRes = await fetchVenueDynamicData(venueSlug);
+      const orderMin = dynamicRes.venue_raw.delivery_specs.order_minimum_no_surcharge;
+      const basePrice = dynamicRes.venue_raw.delivery_specs.delivery_pricing.base_price;
+      const distanceRanges =
+        dynamicRes.venue_raw.delivery_specs.delivery_pricing.distance_ranges;
 
-      setVenueCoordinates({ lat: restaurantLan, lng: restaurantLng });
-      const orederMinimum = staticData.venue.order_minimum;
-      setOrderMinimum(orederMinimum);
-      const distance = calculateDistance(
-        coordinates.lat as number,
-        coordinates.lng as number,
-        staticData.location.lat,
-        staticData.location.lng
+      // 3) convert cart -> cents
+      const cartVal = typeof cartValue === "number" ? cartValue : 0;
+      const cartInCents = Math.round(cartVal * 100);
+
+      // 4) distance
+      const dist = Math.round(
+        calculateDistance(
+          Number(latitude),
+          Number(longitude),
+          venueLat,
+          venueLng
+        )
       );
-      setDeliveryDistance(distance);
+      setDeliveryDistance(dist);
 
-      const surcharge = calcSmallOrderSurcharge(
-        cartValue as number,
-        orederMinimum
-      );
+      // 5) surcharge
+      const surchargeRes = calcSmallOrderSurcharge(cartInCents, orderMin);
+      setSurcharge(surchargeRes);
 
-      const deliveryFee = calcDeliveryFee(
-        dynamicData.venue_raw.delivery_specs.original_delivery_price,
-        distance,
-        dynamicData.venue_raw.delivery_specs.delivery_pricing.distance_ranges
-      );
+      // 6) delivery fee
+      const fee = calcDeliveryFee(basePrice, dist, distanceRanges);
+      if (fee < 0) {
+        setApiError("Delivery is not possible for this distance.");
+        return;
+      }
+      setDeliveryFee(fee);
 
-      const totalPrice = calcTotal(cartValue as number, deliveryFee, surcharge);
-
-      setSurcharge(surcharge);
-      setDeliveryFee(deliveryFee);
-      setTotalPrice(totalPrice);
-    } catch (error) {
-      console.error("Error fetching venue data:", error);
+      // 7) total
+      const total = calcTotal(cartInCents, fee, surchargeRes);
+      setTotalPrice(total);
+    } catch (err: unknown) {
+      console.error(err);
+      setApiError("Failed to fetch data or calculate price.");
     }
   };
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white shadow-sm">
-      <h1 className="text-2xl font-bold mb-6">
-        Delivery Order Price Calculator
-      </h1>
+    <div>
+      <h2>Delivery Order Price Calculator</h2>
 
-      <form onSubmit={handleSubmit} action="">
-        <InputFields
-          venueSlug={venueSlug}
-          setVenueSlug={setVenueSlug}
-          cartValue={cartValue}
-          setCartValue={setCartValue}
-          latitude={coordinates.lat}
-          setLatitude={(lat) => setCoordinates((prev) => ({ ...prev, lat }))}
-          longitude={coordinates.lng}
-          setLongitude={(lng) => setCoordinates((prev) => ({ ...prev, lng }))}
-          handleLocation={handleLocation}
-        />
-      </form>
+      
+      <div className="details-box">
+        <h3>Details</h3>
+        <form onSubmit={handleCalculate}>
+          <InputFields
+            venueSlug={venueSlug}
+            setVenueSlug={setVenueSlug}
+            cartValue={cartValue}
+            setCartValue={setCartValue}
+            latitude={latitude}
+            setLatitude={setLatitude}
+            longitude={longitude}
+            setLongitude={setLongitude}
+            handleLocation={handleLocation}
+            errors={fieldErrors}
+          />
 
-      <div>
-        <PriceBreakdown
-          cartValue={cartValue as number}
-          surcharge={surcharge}
-          deliveryFee={deliveryFee}
-          deliveryDistance={deliveryDistance}
-          totalPrice={totalPrice}
-        />
+          <button type="submit">Calculate delivery price</button>
+        </form>
       </div>
 
-      {/* <div>
-        <h2 className="text-xl font-bold mb-4">Price breakdown</h2>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span>Cart Value</span>
-            <span data-raw-value="1000">{priceBreakdown.cartValue}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Delivery fee</span>
-            <span data-raw-value="190">{priceBreakdown.deliveryFee}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Delivery distance</span>
-            <span data-raw-value="177">{priceBreakdown.deliveryDistance}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Small order surcharge</span>
-            <span data-raw-value="0">{priceBreakdown.smallOrderSurcharge}</span>
-          </div>
-          <div className="flex justify-between font-bold">
-            <span>Total price</span>
-            <span data-raw-value="1190">{priceBreakdown.totalPrice}</span>
-          </div>
+      {/* Show any error from API or geolocation */}
+      {apiError && <ErrorMessage message={apiError} />}
+
+     {/* Show the calculated price breakdown */}
+      {(totalPrice > 0 || surcharge > 0 || deliveryFee > 0) && (
+        <div className="breakdown-box" style={{ marginTop: "1rem" }}>
+          <PriceBreakdown
+            cartValue={totalPrice - surcharge - deliveryFee}
+            surcharge={surcharge}
+            deliveryFee={deliveryFee}
+            deliveryDistance={deliveryDistance}
+            totalPrice={totalPrice}
+          />
         </div>
-      </div> */}
+      )}
     </div>
   );
 };
