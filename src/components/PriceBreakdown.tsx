@@ -1,4 +1,4 @@
-import { FC } from "react";
+import  { FC } from "react";
 import { PriceBreakdownProps } from "../types/type";
 
 const PriceBreakdown: FC<PriceBreakdownProps> = ({
@@ -8,42 +8,41 @@ const PriceBreakdown: FC<PriceBreakdownProps> = ({
   totalPrice,
   deliveryDistance,
 }) => {
-
-  const formatEUR = (cents: number) => `${(cents / 100).toFixed(2)} EUR`;
+  const formatEUR = (cents: number) => `${(cents / 100).toFixed(2)} €`;
 
   return (
-    <div style={{ marginTop: "1rem" }}>
-      <h2>Price Breakdown</h2>
-      <p>
-        Cart Value:{" "}
-        <span data-raw-value={cartValue}>
-          {formatEUR(cartValue)}
-        </span>
-      </p>
-      <p>
-        Small Order Surcharge:{" "}
-        <span data-raw-value={surcharge}>
-          {formatEUR(surcharge)}
-        </span>
-      </p>
-      <p>
-        Delivery Fee:{" "}
-        <span data-raw-value={deliveryFee}>
-          {formatEUR(deliveryFee)}
-        </span>
-      </p>
-      <p>
-        Delivery Distance:{" "}
-        <span data-raw-value={deliveryDistance}>
-          {deliveryDistance} m
-        </span>
-      </p>
-      <p>
-        Total Price:{" "}
-        <span data-raw-value={totalPrice}>
-          {formatEUR(totalPrice)}
-        </span>
-      </p>
+    <div className="mt-4">
+      <h2 className="text-lg font-bold mb-4">Price Breakdown</h2>
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span>Cart Value</span>
+          <span data-raw-value={cartValue} className="font-semibold">
+            {formatEUR(cartValue)}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Small Order Surcharge</span>
+          <span data-raw-value={surcharge} className="font-semibold">
+            {formatEUR(surcharge)}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Delivery Fee</span>
+          <span data-raw-value={deliveryFee} className="font-semibold">
+            {formatEUR(deliveryFee)}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span>Delivery Distance</span>
+          <span data-raw-value={deliveryDistance} className="font-semibold">
+            {deliveryDistance} m
+          </span>
+        </div>
+        <div className="flex justify-between text-sm font-bold border-t border-gray-300 pt-2">
+          <span>Total Price</span>
+          <span data-raw-value={totalPrice}>{formatEUR(totalPrice)}</span>
+        </div>
+      </div>
     </div>
   );
 };

@@ -24,7 +24,7 @@ const Calculator: React.FC = () => {
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
 
- 
+
   const handleLocation = () => {
     if (!navigator.geolocation) {
       setApiError("Geolocation not supported by your browser.");
@@ -66,22 +66,23 @@ const Calculator: React.FC = () => {
     if (!validateForm()) return;
 
     try {
-      // 1) static -> venue coords
+      // 1) Fetch static => venue coords
       const staticRes = await fetchVenueStaticData(venueSlug);
       const [venueLng, venueLat] = staticRes.venue_raw.location.coordinates;
 
-      // 2) dynamic -> order_min_no_surcharge, basePrice, distanceRanges
+      // 2) Fetch dynamic => surcharge + basePrice + distanceRanges
       const dynamicRes = await fetchVenueDynamicData(venueSlug);
-      const orderMin = dynamicRes.venue_raw.delivery_specs.order_minimum_no_surcharge;
-      const basePrice = dynamicRes.venue_raw.delivery_specs.delivery_pricing.base_price;
+      const orderMin =
+        dynamicRes.venue_raw.delivery_specs.order_minimum_no_surcharge;
+      const basePrice =
+        dynamicRes.venue_raw.delivery_specs.delivery_pricing.base_price;
       const distanceRanges =
         dynamicRes.venue_raw.delivery_specs.delivery_pricing.distance_ranges;
 
-      // 3) convert cart -> cents
+      // 3) Convert cart value => cents
       const cartVal = typeof cartValue === "number" ? cartValue : 0;
       const cartInCents = Math.round(cartVal * 100);
 
-      // 4) distance
       const dist = Math.round(
         calculateDistance(
           Number(latitude),
@@ -92,11 +93,9 @@ const Calculator: React.FC = () => {
       );
       setDeliveryDistance(dist);
 
-      // 5) surcharge
       const surchargeRes = calcSmallOrderSurcharge(cartInCents, orderMin);
       setSurcharge(surchargeRes);
 
-      // 6) delivery fee
       const fee = calcDeliveryFee(basePrice, dist, distanceRanges);
       if (fee < 0) {
         setApiError("Delivery is not possible for this distance.");
@@ -104,7 +103,6 @@ const Calculator: React.FC = () => {
       }
       setDeliveryFee(fee);
 
-      // 7) total
       const total = calcTotal(cartInCents, fee, surchargeRes);
       setTotalPrice(total);
     } catch (err: unknown) {
@@ -114,13 +112,14 @@ const Calculator: React.FC = () => {
   };
 
   return (
-    <div>
-      <h2>Delivery Order Price Calculator</h2>
+    <div className="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+        Delivery Order Price Calculator
+      </h1>
 
-      
-      <div className="details-box">
-        <h3>Details</h3>
-        <form onSubmit={handleCalculate}>
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Details</h2>
+        <form onSubmit={handleCalculate} className="space-y-6">
           <InputFields
             venueSlug={venueSlug}
             setVenueSlug={setVenueSlug}
@@ -134,16 +133,23 @@ const Calculator: React.FC = () => {
             errors={fieldErrors}
           />
 
-          <button type="submit">Calculate delivery price</button>
+          <button
+            type="submit"
+            className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          >
+            Calculate delivery price
+          </button>
         </form>
       </div>
 
-      {/* Show any error from API or geolocation */}
-      {apiError && <ErrorMessage message={apiError} />}
+      {apiError && (
+        <div className="mt-6 bg-red-100 text-red-700 p-4 rounded-lg shadow">
+          <ErrorMessage message={apiError} />
+        </div>
+      )}
 
-     {/* Show the calculated price breakdown */}
       {(totalPrice > 0 || surcharge > 0 || deliveryFee > 0) && (
-        <div className="breakdown-box" style={{ marginTop: "1rem" }}>
+        <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
           <PriceBreakdown
             cartValue={totalPrice - surcharge - deliveryFee}
             surcharge={surcharge}
