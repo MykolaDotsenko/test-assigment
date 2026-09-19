@@ -24,8 +24,10 @@ jobs:
         with:
           node-version: 24
 
-      - name: Regenerate lockfile from the pinned manifest
-        run: npm install --package-lock-only --ignore-scripts
+      - name: Regenerate lockfile from a clean graph
+        run: |
+          rm -f package-lock.json
+          npm install --package-lock-only --ignore-scripts
 
       - name: Commit lockfile
         run: |
