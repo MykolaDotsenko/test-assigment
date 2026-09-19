@@ -4,7 +4,7 @@
 
 **A transparent delivery-fee explorer rebuilt from a small React/TypeScript home assignment into a production-minded frontend case study.**
 
-[**Open the live app →**](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md)
+[**Open the live app →**](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md) · [Browser tests](./e2e/radius.spec.ts)
 
 Radius answers one practical question: **what will this delivery cost, and why?**
 
@@ -40,7 +40,7 @@ React UI
    |
    +----> validated venue API adapter
                  |
-                 +----> remote assignment API
+                 +----> Fetch API / remote assignment API
 ```
 
 The important boundaries are deliberate:
@@ -81,23 +81,26 @@ Distance is calculated with the Haversine formula using the customer and venue c
 
 ### Runtime
 
-- React 18
-- TypeScript (strict)
-- Vite 6
-- Axios
-- Tailwind/PostCSS pipeline + custom responsive CSS
+- React 19.3
+- TypeScript 6
+- Vite 8
+- native Fetch + AbortController
 - Geolocation API
 - Intl formatting APIs
+- custom responsive CSS
 
-### Quality
+Runtime dependencies are only **React and React DOM**. Radius deliberately has no API client package, router, state library, UI kit, animation runtime, map SDK, analytics SDK, or CSS framework.
 
-- Vitest
-- ESLint flat config
-- TypeScript build checks
-- GitHub Actions
+### Verification and delivery
+
+- Vitest 5
+- Playwright 1.63
+- axe-core browser accessibility checks
+- ESLint 10
+- strict TypeScript
+- GitHub Actions on Node 24
+- Dependabot
 - Vercel deployment
-
-The project intentionally does not introduce a global state library, router, map SDK, animation runtime, or backend. They would increase the dependency and failure surface without improving this single-screen workflow.
 
 ## Quality evidence
 
@@ -114,19 +117,24 @@ Pure tests cover the behavior most likely to produce expensive regressions:
 - Haversine invariants and a real Helsinki distance sanity check
 - malformed static/dynamic provider payloads
 
-CI runs the complete gate on pushes and pull requests:
+Browser tests mock the remote provider at the HTTP boundary and verify:
 
-```bash
-npm run check
-```
+- a complete deterministic quote journey
+- a valid outside-delivery-area result
+- validation before any provider request
+- serious/critical WCAG A/AA regressions with axe
+- horizontal-overflow protection on desktop and mobile Chromium
 
-which executes:
+CI runs the static gate and browser suite on pull requests:
 
 ```text
-ESLint with zero warnings
-→ Vitest domain / boundary tests
-→ TypeScript production build
-→ Vite production bundle
+ESLint
+→ TypeScript
+→ Vitest
+→ Vite production build
+→ Chromium install
+→ Playwright desktop + Pixel 7 profile
+→ axe accessibility checks
 ```
 
 ## Accessibility and UX
@@ -156,14 +164,19 @@ npm ci
 npm run dev
 ```
 
-Open the local Vite URL and use the included Helsinki example, one of the quick presets, or your own coordinates.
-
-Run the full verification gate:
+Run all static/unit checks:
 
 ```bash
 npm run check
 ```
 
+Install the browser once and run the end-to-end suite:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
 ## Repository evolution
 
-This repository intentionally preserves its origin as a technical assignment. The goal of the rebuild is not to disguise that history, but to demonstrate the follow-through expected in production work: model the domain explicitly, isolate unreliable boundaries, design useful states, test the rules, document the trade-offs, and ship a product surface that explains itself.
+This repository intentionally preserves its origin as a technical assignment. The rebuild does not disguise that history. It demonstrates the follow-through expected in production work: model the domain explicitly, minimize the runtime surface, validate unreliable boundaries, design useful states, test the rules in isolation and in a browser, document the trade-offs, and ship a product surface that explains itself.

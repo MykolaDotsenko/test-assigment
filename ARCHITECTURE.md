@@ -11,10 +11,10 @@ React UI
   |
   +--> venue API adapter
           |
-          +--> axios / remote home-assignment API
+          +--> native Fetch / remote home-assignment API
 ```
 
-The domain does not import React, Axios, the DOM, geolocation, or browser storage.
+The domain does not import React, the DOM, geolocation, storage, or a network client.
 
 ## Responsibilities
 
@@ -41,7 +41,7 @@ Owns the Haversine calculation. It is deterministic and browser-independent.
 
 Owns HTTP concerns and the trust boundary around the remote API.
 
-Both static and dynamic venue payloads are fetched in parallel. Unknown JSON is validated and normalized into one `VenueProfile` before pricing can consume it. Malformed provider data fails at the boundary instead of leaking `undefined` through the UI.
+Both static and dynamic venue payloads are fetched in parallel with native Fetch. Unknown JSON is validated and normalized into one `VenueProfile` before pricing can consume it. HTTP failure, timeout, malformed data, and an unknown venue slug are translated into bounded product errors.
 
 ### `src/components/Calculator.tsx`
 
@@ -54,7 +54,7 @@ Owns orchestration only:
 5. call the pricing domain;
 6. render success, out-of-range, or failure state.
 
-Geolocation is a progressive convenience. Manual coordinates remain the primary resilient path.
+Geolocation is a progressive convenience. Manual coordinates remain the resilient path.
 
 ## State rules
 
@@ -65,20 +65,38 @@ Geolocation is a progressive convenience. Manual coordinates remain the primary 
 - Recent estimates are session-only presentation state.
 - Provider failure is distinct from a valid "outside delivery area" result.
 
-## Why no global state library?
+## Runtime dependency policy
 
-There is one screen and one authoritative quote workflow. Introducing Redux, Zustand, a query cache, or a service container would create more lifecycle and synchronization surface than the product requires.
+The shipped application depends only on React and React DOM.
 
-## Quality strategy
+No router, state library, API client, UI kit, CSS framework, map SDK, or animation runtime is justified by this one-screen workflow. Browser platform APIs are sufficient and keep the failure/supply-chain surface small.
 
-The CI gate runs:
+## Test pyramid
 
-```bash
-npm run lint
-npm test
-npm run build
+```text
+Playwright + axe
+     ↑
+HTTP boundary mocked at browser level
+     ↑
+Vitest domain / provider normalization tests
+     ↑
+Pure pricing + geo functions
 ```
 
-Pure tests target the high-risk rules: decimal money parsing, coordinate boundaries, distance-range sentinels, fee arithmetic, outside-area behavior, Haversine distance, and malformed API payloads.
+The browser suite uses deterministic mocked provider responses so it can verify product behavior without coupling CI reliability to a third-party development API.
 
-The UI uses native labels, fieldsets, meter, buttons, `aria-invalid`, `aria-describedby`, `aria-live`, `role="alert"`, visible focus, reduced-motion handling, and forced-colors fallbacks.
+## Quality gate
+
+Pull requests run:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npx playwright install --with-deps chromium
+npm run test:e2e
+```
+
+The browser matrix covers desktop Chromium and a Pixel 7 profile. Axe checks the completed quote state for serious/critical WCAG A/AA regressions. Failures retain Playwright traces and screenshots where applicable.
