@@ -86,7 +86,7 @@ export default function Calculator() {
     setRequestError("");
   };
 
-  const usePreset = (latitude: string, longitude: string) => {
+  const applyPreset = (latitude: string, longitude: string) => {
     setForm((current) => ({ ...current, latitude, longitude }));
     setFieldErrors((current) => ({ ...current, latitude: undefined, longitude: undefined }));
   };
@@ -279,7 +279,7 @@ export default function Calculator() {
                       key={preset.name}
                       type="button"
                       className="preset-button"
-                      onClick={() => usePreset(preset.latitude, preset.longitude)}
+                      onClick={() => applyPreset(preset.latitude, preset.longitude)}
                     >
                       {preset.name}
                     </button>
