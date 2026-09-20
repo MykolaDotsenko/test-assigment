@@ -160,7 +160,15 @@ export default function Calculator() {
 
         <div className="hero-visual" aria-hidden="true">
           <div className="hero-visual-glow" />
-          <img src="/brand/visuals/hero-finland.webp" alt="" width="1100" height="1100" />
+          <img
+            src="/brand/visuals/hero-finland.webp"
+            alt=""
+            width="1100"
+            height="1100"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
           <div className="hero-float hero-float--top">
             <span>Tariff scope</span>
             <strong>Finland-first</strong>

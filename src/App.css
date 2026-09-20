@@ -944,3 +944,22 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+
+/* Mobile interaction targets: keep primary interactive controls comfortably tappable. */
+.site-nav a,
+.text-button,
+.segment,
+.directory-filter,
+.quote-cta,
+.empty-result-link,
+.source-row a {
+  min-height: 44px;
+}
+
+.site-nav a,
+.source-row a,
+.empty-result-link {
+  display: inline-flex;
+  align-items: center;
+}

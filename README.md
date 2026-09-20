@@ -30,7 +30,9 @@ Pakettitutka therefore models each carrier separately and exposes an **accuracy 
 - no GPS or street address required; an optional business destination postcode is used only to detect PostNord's location-specific island/ferry surcharge;
 - mainland-vs-Åland route selection asks only for location detail that changes a price;
 - accessible controls, focus states and reduced-motion support;
-- Finland-first visual system with a dedicated Pakettitutka asset library.
+- Finland-first visual system with a dedicated Pakettitutka asset library;
+- branded web manifest/home-screen metadata and social preview;
+- no service-worker tariff caching: freshness takes priority over offline behavior.
 
 Brand assets live under `public/brand/` and are split into `logos/`, `visuals/`, and `mockups/`.
 
