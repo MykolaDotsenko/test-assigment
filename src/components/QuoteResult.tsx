@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatPrice, type ParcelInput, type Quote } from "../domain/finlandTariffs";
 import { COPY, localizeTechnicalText, type Lang } from "../i18n";
 
@@ -60,6 +60,24 @@ function coverageCopy(input: ParcelInput, lang: Lang) {
   };
 }
 
+function shipmentSummary(input: ParcelInput, quote: Quote, lang: Lang): string {
+  const route =
+    input.route === "aland"
+      ? lang === "fi" ? "Manner-Suomi ↔ Ahvenanmaa" : "Mainland Finland ↔ Åland"
+      : lang === "fi" ? "Manner-Suomi" : "Mainland Finland";
+
+  return [
+    "Pakettitutka",
+    `${quote.provider} — ${quote.service}`,
+    `${formatPrice(quote.priceCents)} · ${quote.deliveryTime}`,
+    `${input.weightKg} kg · ${input.lengthCm} × ${input.widthCm} × ${input.heightCm} cm`,
+    route,
+    input.destinationPostalCode
+      ? `${lang === "fi" ? "Kohteen postinumero" : "Destination postcode"}: ${input.destinationPostalCode}`
+      : null,
+  ].filter(Boolean).join("\n");
+}
+
 export default function QuoteResult({
   input,
   quotes,
@@ -70,11 +88,18 @@ export default function QuoteResult({
   lang: Lang;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const c = COPY[lang].results;
 
   useEffect(() => {
     sectionRef.current?.focus();
   }, []);
+
+  const copyQuote = async (quote: Quote) => {
+    await navigator.clipboard.writeText(shipmentSummary(input, quote, lang));
+    setCopiedId(quote.id);
+    window.setTimeout(() => setCopiedId((current) => current === quote.id ? null : current), 1800);
+  };
 
   const secondPrice = quotes[1]?.priceCents ?? null;
   const bestPrice = quotes[0]?.priceCents ?? null;
@@ -130,53 +155,72 @@ export default function QuoteResult({
           </a>
         </div>
       ) : (
-        <div className="quote-list">
-          {quotes.map((item, index) => (
-            <article className={index === 0 ? "quote-card quote-card--best" : "quote-card"} key={item.id}>
-              <div className="quote-topline">
-                <div>
-                  <span className="provider-name">{item.provider}</span>
-                  <h3>{item.service}</h3>
-                </div>
-                <div className="quote-price-stack">
-                  <strong className="quote-price">{formatPrice(item.priceCents)}</strong>
-                  {index === 0 && <span className="best-label">{c.lowest}</span>}
-                </div>
-              </div>
+        <>
+          <div className="handoff-note">
+            <strong>{c.verify}</strong>
+            <span>{c.handoff}</span>
+          </div>
 
-              <div className="quote-badges">
-                <span className={`accuracy accuracy--${item.accuracy}`}>{badge(item.accuracy, lang)}</span>
-                <span>{item.audience === "consumer" ? c.public : c.business}</span>
-                <span>{item.deliveryTime}</span>
-              </div>
-
-              <a
-                className={index === 0 ? "quote-cta quote-cta--primary" : "quote-cta"}
-                href={item.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${c.verify}: ${item.provider}`}
-              >
-                {c.verify} <span aria-hidden="true">↗</span>
-              </a>
-
-              <details className="quote-more">
-                <summary>{c.why}</summary>
-                <p>{lang === "fi" ? localizeTechnicalText(item.explanation, lang) : item.explanation}</p>
-                <h4>{c.technical}</h4>
-                <ul>
-                  {item.details.map((detail) => (
-                    <li key={detail}>{localizeTechnicalText(detail, lang)}</li>
-                  ))}
-                </ul>
-                <div className="source-row">
-                  <span>{c.checked}: {item.effectiveDate}</span>
-                  <a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel} ↗</a>
+          <div className="quote-list">
+            {quotes.map((item, index) => (
+              <article className={index === 0 ? "quote-card quote-card--best" : "quote-card"} key={item.id}>
+                <div className="quote-topline">
+                  <div>
+                    <span className="provider-name">{item.provider}</span>
+                    <h3>{item.service}</h3>
+                  </div>
+                  <div className="quote-price-stack">
+                    <strong className="quote-price">{formatPrice(item.priceCents)}</strong>
+                    {index === 0 && <span className="best-label">{c.lowest}</span>}
+                  </div>
                 </div>
-              </details>
-            </article>
-          ))}
-        </div>
+
+                <div className="quote-badges">
+                  <span className={`accuracy accuracy--${item.accuracy}`}>{badge(item.accuracy, lang)}</span>
+                  <span>{item.audience === "consumer" ? c.public : c.business}</span>
+                  <span>{item.deliveryTime}</span>
+                </div>
+
+                <div className="quote-actions">
+                  <a
+                    className={index === 0 ? "quote-cta quote-cta--primary" : "quote-cta"}
+                    href={item.actionUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`${c.verify}: ${item.provider}`}
+                  >
+                    {c.verify} <span aria-hidden="true">↗</span>
+                  </a>
+                  <button
+                    type="button"
+                    className="quote-copy"
+                    onClick={() => void copyQuote(item)}
+                    aria-live="polite"
+                  >
+                    {copiedId === item.id ? c.copied : c.copy}
+                  </button>
+                </div>
+
+                {item.actionRequiresAccount && <small className="handoff-account">{c.accountRequired}</small>}
+
+                <details className="quote-more">
+                  <summary>{c.why}</summary>
+                  <p>{lang === "fi" ? localizeTechnicalText(item.explanation, lang) : item.explanation}</p>
+                  <h4>{c.technical}</h4>
+                  <ul>
+                    {item.details.map((detail) => (
+                      <li key={detail}>{localizeTechnicalText(detail, lang)}</li>
+                    ))}
+                  </ul>
+                  <div className="source-row">
+                    <span>{c.checked}: {item.effectiveDate}</span>
+                    <a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel} ↗</a>
+                  </div>
+                </details>
+              </article>
+            ))}
+          </div>
+        </>
       )}
 
       <details className="coverage-disclosure">

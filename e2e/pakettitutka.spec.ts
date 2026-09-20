@@ -17,7 +17,9 @@ test("compares consumer tariffs and ranks the cheapest calculable option", async
   await expect(page.getByText("Matkahuolto").first()).toBeVisible();
   await expect(page.locator('[data-test-id="bestPrice"]')).toContainText("8,80");
   await expect(page.getByText("Published public tariff").first()).toBeVisible();
-  await expect(page.locator('[data-test-id="results"]').getByRole("link", { name: /Open official pricing: Matkahuolto/ })).toBeVisible();
+  const handoff = results.getByRole("link", { name: /Continue with carrier: Matkahuolto/ });
+  await expect(handoff).toBeVisible();
+  await expect(handoff).toHaveAttribute("href", "https://www.matkahuolto.fi/buy-parcel");
 });
 
 test("business mode exposes PostNord list-rate calculations", async ({ page }) => {
@@ -29,7 +31,7 @@ test("business mode exposes PostNord list-rate calculations", async ({ page }) =
   await expect(results.getByText("Published list calculation").first()).toBeVisible();
   await expect(results.getByText("Matkahuolto")).toHaveCount(0);
   await expect(results.getByText("GLS Finland")).toHaveCount(0);
-  await results.getByText("Calculation details").first().click();
+  await results.getByText("Why this price?").first().click();
   await expect(results.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
 });
 
@@ -56,7 +58,7 @@ test("supports Åland route without asking for a postcode or GPS", async ({ page
 
   const results = page.locator('[data-test-id="results"]');
   await expect(results.getByText("Mainland Finland ↔ Åland")).toBeVisible();
-  await results.getByText("Calculation details").first().click();
+  await results.getByText("Why this price?").first().click();
   await expect(results.getByText("Åland tariff applied")).toBeVisible();
 });
 
@@ -133,7 +135,7 @@ test("applies PostNord island and ferry surcharge from an optional destination p
   await page.locator('[data-test-id="comparePrices"]').click();
 
   const results = page.locator('[data-test-id="results"]');
-  await results.getByText("Calculation details").first().click();
+  await results.getByText("Why this price?").first().click();
   await expect(results.getByText("Island/ferry surcharge: +€11.63 excl. VAT").first()).toBeVisible();
   await expect(results).toContainText("destination 00190");
 });
@@ -237,4 +239,32 @@ test("shows calculated carriers first instead of the full directory", async ({ p
   await expect(directory.getByRole("button", { name: /Calculated/ })).toHaveAttribute("aria-pressed", "true");
   await expect(directory.getByText("Posti", { exact: true })).toBeVisible();
   await expect(directory.getByText("FedEx", { exact: true })).toHaveCount(0);
+});
+
+
+test("hands a calculated quote off to the carrier without losing shipment context", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.locator('[data-test-id="comparePrices"]').click();
+
+  const results = page.locator('[data-test-id="results"]');
+  const copy = results.getByRole("button", { name: "Copy shipment details" }).first();
+  await copy.click();
+
+  await expect(copy).toHaveText("Copied");
+  const clipboard = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboard).toContain("Matkahuolto");
+  expect(clipboard).toContain("1 kg");
+  expect(clipboard).toContain("25 × 15 × 5 cm");
+});
+
+test("uses transaction destinations instead of tariff pages for calculated carriers", async ({ page }) => {
+  await page.locator('[data-test-id="comparePrices"]').click();
+  const results = page.locator('[data-test-id="results"]');
+
+  await expect(results.getByRole("link", { name: /Continue with carrier: Matkahuolto/ }))
+    .toHaveAttribute("href", "https://www.matkahuolto.fi/buy-parcel");
+  await expect(results.getByRole("link", { name: /Continue with carrier: Posti/ }))
+    .toHaveAttribute("href", "https://www.posti.fi/palvelutverkossa/lahettaminen/uusi/?lang=en");
+  await expect(results.getByRole("link", { name: /Continue with carrier: GLS Finland/ }))
+    .toHaveAttribute("href", "https://glspaketti.fi/");
 });

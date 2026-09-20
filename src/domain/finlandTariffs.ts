@@ -5,18 +5,22 @@ import {
   DHL_URL,
   DSV_URL,
   FEDEX_URL,
+  GLS_SEND_URL,
   GLS_URL,
   JETPAK_URL,
   KAUKOKIITO_URL,
   MATKAHUOLTO_PUBLIC_BOXES,
+  MATKAHUOLTO_SEND_URL,
   MATKAHUOLTO_URL,
   POSTI_BOXES,
+  POSTI_SEND_URL,
   POSTI_URL,
   POSTNORD_FINLAND_ISLAND_FERRY_POSTCODES,
   POSTNORD_FUEL_SURCHARGE,
   POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS,
   POSTNORD_LOCKER_BANDS,
   POSTNORD_SERVICE_POINT_BANDS,
+  POSTNORD_SEND_URL,
   POSTNORD_URL,
   TARIFF_SNAPSHOT_DATE,
   UPS_URL,
@@ -59,6 +63,8 @@ export interface Quote {
   explanation: string;
   sourceLabel: string;
   sourceUrl: string;
+  actionUrl: string;
+  actionRequiresAccount?: boolean;
   effectiveDate: string;
   details: string[];
 }
@@ -132,6 +138,7 @@ function quotePosti(input: ParcelInput): Quote | null {
         : "Official Posti online/OmaPosti domestic price for the smallest fitting parcel size.",
       sourceLabel: "Posti parcel price list",
       sourceUrl: POSTI_URL,
+      actionUrl: POSTI_SEND_URL,
       effectiveDate: "2026-06-02",
       details: [
         `Selected size: ${box.name}`,
@@ -167,6 +174,7 @@ function quotePosti(input: ParcelInput): Quote | null {
         "Official XXL price. Eligibility is checked using Posti's longest-side and length-plus-girth limits.",
       sourceLabel: "Posti parcel price list",
       sourceUrl: POSTI_URL,
+      actionUrl: POSTI_SEND_URL,
       effectiveDate: "2026-06-02",
       details: [
         "Max weight: 25 kg",
@@ -197,6 +205,7 @@ function quoteMatkahuolto(input: ParcelInput): Quote | null {
         "Current public Matkahuolto consumer price for the smallest fitting size exposed on the official domestic parcel page.",
       sourceLabel: "Matkahuolto domestic parcels",
       sourceUrl: MATKAHUOLTO_URL,
+      actionUrl: MATKAHUOLTO_SEND_URL,
       effectiveDate: TARIFF_SNAPSHOT_DATE,
       details: [
         `Selected size: ${box.name}`,
@@ -249,6 +258,7 @@ function quoteGls(input: ParcelInput): Quote | null {
       "Official GLSparcel.fi basic tariff with the selected pickup and door-delivery surcharges applied.",
     sourceLabel: "GLS Finland consumer price list",
     sourceUrl: GLS_URL,
+    actionUrl: GLS_SEND_URL,
     effectiveDate: TARIFF_SNAPSHOT_DATE,
     details: [
       `Base band: up to ${input.weightKg <= 1 ? "1" : input.weightKg <= 3 ? "3" : input.weightKg <= 15 ? "15" : "25"} kg`,
@@ -350,6 +360,8 @@ function quotePostNord(
       "Calculated from PostNord's 2026 list rate using chargeable weight, current September parcel fuel surcharge and Finnish VAT. Location-specific island/ferry surcharge is included when a destination postcode is supplied. Your negotiated contract rate may differ.",
     sourceLabel: "PostNord 2026 service price list",
     sourceUrl: POSTNORD_URL,
+    actionUrl: POSTNORD_SEND_URL,
+    actionRequiresAccount: true,
     effectiveDate: "2026-09-01 fuel surcharge",
     details: [
       `Actual weight: ${input.weightKg.toFixed(2)} kg`,
