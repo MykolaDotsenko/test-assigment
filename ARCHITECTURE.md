@@ -23,6 +23,24 @@ sort by calculable price
 render confidence + official source
 ```
 
+## Data boundary
+
+```text
+src/data/finlandTariffData.ts
+  ├─ official tariff bands
+  ├─ effective / snapshot constants
+  ├─ carrier source URLs
+  └─ PostNord island/ferry postcode set
+            ↓
+src/domain/finlandTariffs.ts
+  ├─ eligibility rules
+  ├─ dimensional / volumetric calculations
+  ├─ surcharge composition
+  └─ normalized Quote[]
+```
+
+Tariff refreshes should normally modify the data module first. Domain logic changes require separate tests because they change how published rules are interpreted.
+
 ## Accuracy model
 
 Each result is classified as one of:

@@ -119,6 +119,12 @@ Pakettitutka also lists major operators that cannot be honestly reduced to one s
 
 The UI links directly to official carrier sources.
 
+## Tariff maintenance
+
+Mutable carrier data is centralized in `src/data/finlandTariffData.ts`: published price bands, source URLs, snapshot date, fuel/VAT constants and PostNord island/ferry postcodes live there. Carrier eligibility, chargeable-weight math and quote composition remain in `src/domain/finlandTariffs.ts`.
+
+This separation keeps routine tariff refreshes reviewable and reduces the chance of changing pricing algorithms while updating source data.
+
 ## Engineering rules
 
 - fixed-size boxes are rotation-aware and enforce provider minimum as well as maximum dimensions;
