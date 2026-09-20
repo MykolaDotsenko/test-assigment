@@ -26,10 +26,14 @@ export const POSTNORD_FINLAND_ISLAND_FERRY_POSTCODES = new Set([
 ]);
 
 export const POSTI_URL = "https://www.posti.fi/en/sending/parcels/package-price-lists";
+export const POSTI_SEND_URL = "https://www.posti.fi/palvelutverkossa/lahettaminen/uusi/?lang=en";
 export const MATKAHUOLTO_URL = "https://www.matkahuolto.fi/packages/domestic-parcels";
+export const MATKAHUOLTO_SEND_URL = "https://www.matkahuolto.fi/buy-parcel";
 export const GLS_URL = "https://gls-group.com/FI/en/ship-with-gls/Consumers-Small-Businesses/";
+export const GLS_SEND_URL = "https://glspaketti.fi/";
 export const POSTNORD_URL =
   "https://www.postnord.fi/siteassets/pdf/hinnastot/online_hinnastoliite_2026-02-01.pdf";
+export const POSTNORD_SEND_URL = "https://portal.postnord.com/";
 export const FEDEX_URL = "https://www.fedex.com/en-fi/shipping/rates/fedex-rates.html";
 export const UPS_URL = "https://www.ups.com/fi/en/support/shipping-support/shipping-costs-rates";
 export const DHL_URL = "https://www.dhl.com/fi-en/home/express.html";

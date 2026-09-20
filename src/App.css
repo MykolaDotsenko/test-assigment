@@ -1512,3 +1512,87 @@
     font-size: clamp(1.85rem, 9.5vw, 2.45rem);
   }
 }
+
+
+.handoff-note {
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(28,117,84,.14);
+  border-radius: 14px;
+  background: rgba(238,248,242,.7);
+}
+
+.handoff-note strong {
+  color: var(--accent-strong);
+  font-size: .76rem;
+}
+
+.handoff-note span,
+.handoff-account {
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.45;
+}
+
+.quote-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.quote-actions .quote-cta {
+  margin-top: 0;
+}
+
+.quote-copy {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--accent-strong);
+  font-size: .76rem;
+  font-weight: 820;
+}
+
+.quote-copy:hover,
+.quote-copy:focus-visible {
+  border-color: rgba(28,117,84,.35);
+  background: rgba(255,255,255,.72);
+}
+
+.handoff-account {
+  display: block;
+  margin-top: 7px;
+}
+
+@media (max-width: 720px) {
+  .quote-actions {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .quote-actions .quote-cta {
+    width: 100%;
+  }
+
+  .quote-copy {
+    min-width: 132px;
+  }
+}
+
+@media (max-width: 390px) {
+  .quote-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-copy {
+    width: 100%;
+  }
+}
