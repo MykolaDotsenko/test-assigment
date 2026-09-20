@@ -309,6 +309,11 @@ function quotePostNord(
 
   const { longest, lengthPlusGirth } = longestAndGirth(input);
   const sorted = sortedDimensions(input);
+  const minimumDimensions = [1.5, 10, 15];
+  const meetsMinimumDimensions = sorted.every(
+    (dimension, index) => dimension >= minimumDimensions[index],
+  );
+  if (!meetsMinimumDimensions) return null;
 
   const eligible =
     service === "locker"
@@ -341,7 +346,7 @@ function quotePostNord(
     audience: "business",
     priceCents: priced.totalCents,
     accuracy: "exact-list",
-    deliveryTime: "Contract parcel service",
+    deliveryTime: "1–2 business days",
     explanation:
       "Calculated from PostNord's 2026 list rate using chargeable weight, current September parcel fuel surcharge and Finnish VAT. Your negotiated contract rate may differ.",
     sourceLabel: "PostNord 2026 service price list",

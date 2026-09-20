@@ -105,6 +105,37 @@ describe("consumer quotes", () => {
 });
 
 describe("PostNord contract pricing", () => {
+  it("enforces the published 150 g and 15 × 10 × 1.5 cm minimums", () => {
+    const exactMinimum = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 0.15,
+      lengthCm: 15,
+      widthCm: 10,
+      heightCm: 1.5,
+    });
+    const tooLight = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 0.149,
+      lengthCm: 15,
+      widthCm: 10,
+      heightCm: 1.5,
+    });
+    const tooSmall = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 0.15,
+      lengthCm: 14.9,
+      widthCm: 10,
+      heightCm: 1.5,
+    });
+
+    expect(exactMinimum.length).toBeGreaterThan(0);
+    expect(tooLight).toHaveLength(0);
+    expect(tooSmall).toHaveLength(0);
+  });
+
   it("does not mix consumer tariffs into business/list-rate results", () => {
     const quotes = calculateQuotes({ ...base, audience: "business" });
 
