@@ -4,7 +4,7 @@
 
 **A Finland-specific parcel and courier comparison engine built around verified carrier tariffs instead of generic delivery estimates.**
 
-[**Open the live app →**](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md)
+[**Open on GitHub Pages →**](https://mykoladotsenko.github.io/test-assigment/) · [Vercel deployment](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md)
 
 ![Pakettitutka brand](./public/brand/visuals/brand-board.webp)
 
