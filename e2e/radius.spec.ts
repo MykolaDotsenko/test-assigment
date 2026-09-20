@@ -30,11 +30,11 @@ test("business mode exposes PostNord list-rate calculations", async ({ page }) =
 
 test("editing an input invalidates the visible comparison", async ({ page }) => {
   await page.locator('[data-test-id="comparePrices"]').click();
-  await expect(page.getByText("Comparison")).toBeVisible();
+  await expect(page.getByText("Comparison", { exact: true })).toBeVisible();
 
   await page.locator('[data-test-id="weightKg"]').fill("2");
 
-  await expect(page.getByText("Comparison")).toHaveCount(0);
+  await expect(page.getByText("Comparison", { exact: true })).toHaveCount(0);
 });
 
 test("rejects invalid postal codes before calculating", async ({ page }) => {
@@ -42,12 +42,12 @@ test("rejects invalid postal codes before calculating", async ({ page }) => {
   await page.locator('[data-test-id="comparePrices"]').click();
 
   await expect(page.getByText("Use a 5-digit Finnish postal code.")).toBeVisible();
-  await expect(page.getByText("Comparison")).toHaveCount(0);
+  await expect(page.getByText("Comparison", { exact: true })).toHaveCount(0);
 });
 
 test("has no serious or critical WCAG A/AA violations", async ({ page }) => {
   await page.locator('[data-test-id="comparePrices"]').click();
-  await expect(page.getByText("Comparison")).toBeVisible();
+  await expect(page.getByText("Comparison", { exact: true })).toBeVisible();
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
