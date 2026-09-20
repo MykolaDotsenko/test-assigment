@@ -26,7 +26,7 @@ Pakettitutka therefore models each carrier separately and exposes an **accuracy 
 - branded, responsive comparison flow designed for desktop and mobile;
 - transparent pricing confidence instead of a misleading single “estimate”;
 - official tariff links embedded directly in results and carrier cards;
-- separate public/no-contract and business-contract pricing modes;
+- separate public/no-contract and published business list-rate modes;
 - no GPS, street address, exact destination or account required for the modeled tariffs;
 - mainland-vs-Åland route selection asks only for location detail that changes a price;
 - accessible controls, focus states and reduced-motion support;
@@ -49,7 +49,7 @@ Official online/OmaPosti domestic prices from 2 June 2026:
 | XL | 40 × 60 × 100 cm | €22.90 |
 | XXL | longest side ≤ 200 cm, length + circumference ≤ 300 cm | €44.90 |
 
-Maximum weight for S–XXL is 25 kg. Pakettitutka applies Posti's separate Åland tariff when the user selects a mainland ↔ Åland route; no exact postal code is required.
+Minimum weight is 100 g. XXS minimum size is 1 × 15 × 15 cm; regular parcels use a 1 × 15 × 25 cm minimum. Maximum weight for S–XXL is 25 kg. Pakettitutka applies Posti's separate Åland tariff when the user selects a mainland ↔ Åland route; no exact postal code is required.
 
 Source: https://www.posti.fi/en/sending/parcels/package-price-lists
 
@@ -121,12 +121,12 @@ The UI links directly to official carrier sources.
 
 ## Engineering rules
 
-- fixed-size boxes are rotation-aware;
+- fixed-size boxes are rotation-aware and enforce provider minimum as well as maximum dimensions;
 - girth-based services use longest side + circumference;
 - the UI asks only for mainland-vs-Åland routing because exact postcodes do not change the currently automated tariff formulas;
 - Åland is treated separately where the official tariff differs;
 - no price is invented when an official current tariff is unavailable;
-- public/no-contract and business-contract prices are never silently mixed;
+- public/no-contract and published business list-rate prices are never silently mixed;
 - PostNord fuel surcharge is applied to freight only, excluding additional-service fees;
 - final carrier checkout/invoice remains authoritative;
 - unsupported dynamic/account pricing is explained explicitly instead of being approximated.

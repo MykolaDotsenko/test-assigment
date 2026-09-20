@@ -73,7 +73,10 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
                   <span className="provider-name">{quote.provider}</span>
                   <h3>{quote.service}</h3>
                 </div>
-                <strong className="quote-price">{formatPrice(quote.priceCents)}</strong>
+                <div className="quote-price-stack">
+                  <strong className="quote-price">{formatPrice(quote.priceCents)}</strong>
+                  {index === 0 && <span className="best-label">Lowest calculated</span>}
+                </div>
               </div>
               <div className="quote-badges">
                 <span className={`accuracy accuracy--${quote.accuracy}`}>{badge(quote.accuracy)}</span>
@@ -81,6 +84,15 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
                 <span>{quote.deliveryTime}</span>
               </div>
               <p>{quote.explanation}</p>
+              <a
+                className={index === 0 ? "quote-cta quote-cta--primary" : "quote-cta"}
+                href={quote.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Verify ${quote.provider} pricing on the official source`}
+              >
+                Verify official pricing <span aria-hidden="true">↗</span>
+              </a>
               <details>
                 <summary>Calculation details</summary>
                 <ul>{quote.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>

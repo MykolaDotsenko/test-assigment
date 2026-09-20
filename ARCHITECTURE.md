@@ -7,7 +7,7 @@ Pakettitutka is a carrier-specific tariff engine. It intentionally does not shar
 ```text
 shipment inputs
   ├─ route scope: mainland or Åland
-  ├─ pricing mode: public/no-contract or business contract
+  ├─ pricing mode: public/no-contract or published business list rate
   ├─ actual weight
   └─ dimensions
         ↓
@@ -37,7 +37,7 @@ This is a core domain distinction, not just a UI badge.
 
 ### Posti
 
-Rotation-aware size matching selects the smallest eligible XXS–XL product. XXL uses the official longest-side and length-plus-girth constraint. Selecting the Åland route switches to the separate Posti Åland price table without collecting an exact postal code.
+Rotation-aware size matching selects the smallest eligible XXS–XL product and enforces Posti's 100 g minimum plus distinct XXS vs regular-parcel minimum dimensions. XXL uses the official longest-side and length-plus-girth constraint. Selecting the Åland route switches to the separate Posti Åland price table without collecting an exact postal code.
 
 ### Matkahuolto
 
@@ -72,6 +72,7 @@ Unit tests cover:
 - route scope and Åland pricing;
 - decimal input;
 - rotation-aware box matching;
+- Posti minimum weight/dimension boundaries for XXS and regular parcels;
 - Posti Åland tariff;
 - GLS mandatory home delivery;
 - PostNord volumetric weight;

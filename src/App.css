@@ -814,3 +814,49 @@
   font-size: .76rem;
   line-height: 1.5;
 }
+
+
+.quote-price-stack {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.best-label {
+  color: var(--accent-strong);
+  font-size: .66rem;
+  font-weight: 800;
+}
+
+.quote-cta {
+  width: fit-content;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.78);
+  color: var(--accent-strong);
+  font-size: .76rem;
+  font-weight: 820;
+  text-decoration: none;
+}
+
+.quote-cta:hover,
+.quote-cta:focus-visible {
+  border-color: rgba(28,117,84,.36);
+  background: #f5faf7;
+  outline: none;
+}
+
+.quote-cta--primary {
+  border-color: rgba(28,117,84,.3);
+  background: #e9f6ef;
+}
+
+@media (max-width: 720px) {
+  .quote-price-stack { justify-items: start; }
+}

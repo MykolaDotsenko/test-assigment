@@ -15,6 +15,7 @@ test("compares consumer tariffs and ranks the cheapest calculable option", async
   await expect(page.getByText("Matkahuolto").first()).toBeVisible();
   await expect(page.locator('[data-test-id="bestPrice"]')).toContainText("8,80");
   await expect(page.getByText("Published public tariff").first()).toBeVisible();
+  await expect(page.locator('[data-test-id="results"]').getByRole("link", { name: /Verify Matkahuolto pricing/ })).toBeVisible();
 });
 
 test("business mode exposes PostNord list-rate calculations", async ({ page }) => {

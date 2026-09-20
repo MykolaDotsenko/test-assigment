@@ -79,10 +79,10 @@ const POSTI_BOXES: BoxTariff[] = [
     minWeightKg: 0.1,
     priceCents: 790,
   },
-  { name: "S", max: [11, 32, 42], maxWeightKg: 25, priceCents: 990, alandPriceCents: 1490 },
-  { name: "M", max: [19, 36, 60], maxWeightKg: 25, priceCents: 1190, alandPriceCents: 1690 },
-  { name: "L", max: [36, 37, 60], maxWeightKg: 25, priceCents: 1690, alandPriceCents: 2090 },
-  { name: "XL", max: [40, 60, 100], maxWeightKg: 25, priceCents: 2290, alandPriceCents: 2690 },
+  { name: "S", max: [11, 32, 42], maxWeightKg: 25, min: [1, 15, 25], minWeightKg: 0.1, priceCents: 990, alandPriceCents: 1490 },
+  { name: "M", max: [19, 36, 60], maxWeightKg: 25, min: [1, 15, 25], minWeightKg: 0.1, priceCents: 1190, alandPriceCents: 1690 },
+  { name: "L", max: [36, 37, 60], maxWeightKg: 25, min: [1, 15, 25], minWeightKg: 0.1, priceCents: 1690, alandPriceCents: 2090 },
+  { name: "XL", max: [40, 60, 100], maxWeightKg: 25, min: [1, 15, 25], minWeightKg: 0.1, priceCents: 2290, alandPriceCents: 2690 },
 ];
 
 const MATKAHUOLTO_PUBLIC_BOXES: BoxTariff[] = [
@@ -172,7 +172,7 @@ function quotePosti(input: ParcelInput): Quote | null {
       audience: "consumer",
       priceCents,
       accuracy: "exact-public",
-      deliveryTime: "1–3 business days",
+      deliveryTime: box.name === "XXS" ? "Approx. 2–3 business days" : "1–3 business days",
       explanation: aland
         ? "Official Posti online price to/from Åland for the smallest fitting parcel size."
         : "Official Posti online/OmaPosti domestic price for the smallest fitting parcel size.",
@@ -188,7 +188,19 @@ function quotePosti(input: ParcelInput): Quote | null {
   }
 
   const { longest, lengthPlusGirth } = longestAndGirth(input);
-  if (input.weightKg <= 25 && longest <= 200 && lengthPlusGirth <= 300) {
+  const regularMinimum = [1, 15, 25];
+  const meetsRegularMinimum =
+    input.weightKg >= 0.1 &&
+    sortedDimensions(input).every(
+      (dimension, index) => dimension >= regularMinimum[index],
+    );
+
+  if (
+    meetsRegularMinimum &&
+    input.weightKg <= 25 &&
+    longest <= 200 &&
+    lengthPlusGirth <= 300
+  ) {
     return {
       id: "posti-xxl",
       provider: "Posti",
@@ -278,7 +290,7 @@ function quoteGls(input: ParcelInput): Quote | null {
     audience: "consumer",
     priceCents: total,
     accuracy: "exact-public",
-    deliveryTime: "GLS domestic parcel service",
+    deliveryTime: "Service-dependent ETA",
     explanation:
       "Official GLSparcel.fi basic tariff with the selected pickup and door-delivery surcharges applied.",
     sourceLabel: "GLS Finland consumer price list",

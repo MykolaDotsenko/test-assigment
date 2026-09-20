@@ -47,6 +47,39 @@ describe("consumer quotes", () => {
     expect(belowMinimumWeight?.service).not.toContain("XXS");
   });
 
+  it("enforces the larger minimum footprint for regular Posti parcels", () => {
+    const tooSmallForAllPostiProducts = calculateQuotes({
+      ...base,
+      weightKg: 0.1,
+      lengthCm: 24.9,
+      widthCm: 15,
+      heightCm: 4,
+    }).find((quote) => quote.provider === "Posti");
+
+    const exactRegularMinimum = calculateQuotes({
+      ...base,
+      weightKg: 0.1,
+      lengthCm: 25,
+      widthCm: 15,
+      heightCm: 4,
+    }).find((quote) => quote.provider === "Posti");
+
+    expect(tooSmallForAllPostiProducts).toBeUndefined();
+    expect(exactRegularMinimum?.service).toContain("S parcel");
+  });
+
+  it("does not fall through to XXL when a parcel is below Posti minimum dimensions", () => {
+    const quote = calculateQuotes({
+      ...base,
+      weightKg: 0.1,
+      lengthCm: 20,
+      widthCm: 14,
+      heightCm: 1,
+    }).find((item) => item.provider === "Posti");
+
+    expect(quote).toBeUndefined();
+  });
+
   it("selects the smallest fitting official Posti and Matkahuolto sizes", () => {
     const quotes = calculateQuotes(base);
     const matkahuolto = quotes.find((quote) => quote.provider === "Matkahuolto");
