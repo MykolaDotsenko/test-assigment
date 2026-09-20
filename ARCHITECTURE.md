@@ -1,111 +1,85 @@
-# Radius architecture
+# Radius Finland architecture
 
-Radius is intentionally small, but it treats **untrusted network data**, **money**, **distance pricing**, and **browser permissions** as real boundaries rather than component details.
+Radius is a carrier-specific tariff engine. It intentionally does not share one generic pricing formula across providers.
 
-## Dependency direction
-
-```text
-React UI
-  |
-  +--> delivery domain <---- geo domain
-  |
-  +--> venue API adapter
-          |
-          +--> native Fetch / remote home-assignment API
-```
-
-The domain does not import React, the DOM, geolocation, storage, or a network client.
-
-## Responsibilities
-
-### `src/domain/delivery.ts`
-
-Owns the pricing contract:
-
-- decimal-string to integer-cent parsing;
-- coordinate and venue-slug validation;
-- small-order surcharge;
-- distance-range selection;
-- `max = 0` unavailable sentinel handling;
-- distance fee formula;
-- available vs out-of-range quote state;
-- presentation-safe money/distance formatting.
-
-An unavailable delivery is represented explicitly with nullable fee/total fields. The domain never uses a magic negative delivery fee.
-
-### `src/domain/geo.ts`
-
-Owns the Haversine calculation. It is deterministic and browser-independent.
-
-### `src/services/venueApi.ts`
-
-Owns HTTP concerns and the trust boundary around the remote API.
-
-Both static and dynamic venue payloads are fetched in parallel with native Fetch. Unknown JSON is validated and normalized into one `VenueProfile` before pricing can consume it. HTTP failure, timeout, malformed data, invalid geographic coordinates, overlapping distance ranges, invalid finite ranges, and a misplaced open-ended sentinel are rejected at the boundary rather than leaking ambiguous state into pricing.
-
-### `src/components/Calculator.tsx`
-
-Owns orchestration only:
-
-1. validate editable strings;
-2. invalidate any visible quote before a new pricing state is shown;
-3. cancel the previous in-flight quote;
-4. fetch a normalized venue profile;
-5. calculate distance;
-6. call the pricing domain;
-7. render success, out-of-range, or failure state.
-
-Geolocation is a progressive convenience. Manual coordinates remain the resilient path.
-
-## State rules
-
-- Form fields remain strings until submit so incomplete user input is not coerced into misleading numbers.
-- Money becomes integer cents before entering the pricing domain.
-- Any change to venue, cart, or customer location immediately invalidates the visible quote.
-- Reset aborts an in-flight request and clears quote/error state while preserving session history.
-- A new request aborts the previous request to prevent stale responses from winning a race.
-- Precise coordinates are not persisted.
-- Recent estimates are session-only presentation state.
-- Provider failure is distinct from a valid "outside delivery area" result.
-
-## Runtime dependency policy
-
-The shipped application depends only on React and React DOM.
-
-No router, state library, API client, UI kit, CSS framework, map SDK, or animation runtime is justified by this one-screen workflow. Browser platform APIs are sufficient and keep the failure/supply-chain surface small.
-
-## Test pyramid
+## Flow
 
 ```text
-Playwright + axe
-     ↑
-HTTP boundary mocked at browser level
-     ↑
-Vitest domain / provider normalization tests
-     ↑
-Pure pricing + geo functions
+shipment inputs
+  ├─ Finnish postal-code validation
+  ├─ actual weight
+  └─ dimensions
+        ↓
+carrier-specific eligibility
+        ↓
+carrier-specific tariff function
+        ↓
+normalized Quote[]
+        ↓
+sort by calculable price
+        ↓
+render confidence + official source
 ```
 
-The browser suite uses deterministic mocked provider responses so it can verify product behavior without coupling CI reliability to a third-party development API.
+## Accuracy model
 
-Browser coverage explicitly checks successful quotes, stale-result invalidation, provider failure, outside-area behavior, client-side validation, accessibility, and responsive overflow.
+Each result is classified as one of:
 
-## Quality gate
+- **exact-public** — directly calculable from a current public consumer tariff;
+- **exact-list** — directly calculable from a published business/list tariff, before any customer-specific discount;
+- **live-quote** — official live/account quote required because material variables are dynamic or account-specific;
+- **inactive** — service is currently not offered from Finland.
 
-Pull requests and `main` run:
+This is a core domain distinction, not just a UI badge.
 
-```bash
-npm ci
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npx playwright install --with-deps chromium
-npm run test:e2e
+## Carrier rules
+
+### Posti
+
+Rotation-aware size matching selects the smallest eligible XXS–XL product. XXL uses the official longest-side and length-plus-girth constraint. Åland postal codes (22xxx) switch to the separate Posti Åland price table.
+
+### Matkahuolto
+
+Radius prices only the current consumer sizes whose prices are directly exposed by the official public page. Larger services remain visible in the provider directory rather than being filled from stale historic tariffs.
+
+### GLS
+
+GLSparcel.fi is modeled by weight band. Pickup +€20 and door delivery +€5 are applied from the public tariff. Door delivery is forced above 15 kg. Dimension and girth limits are evaluated before quoting.
+
+### PostNord
+
+PostNord contract list pricing uses:
+
+```text
+volume m³ × 280 kg
+max(actual, volumetric)
+→ published weight band
+→ possible special handling
+→ current parcel fuel surcharge
+→ Finnish VAT
 ```
 
-The browser matrix covers desktop Chromium and a Pixel 7 profile. Axe checks the completed quote state for serious/critical WCAG A/AA regressions. Failures retain Playwright traces and screenshots where applicable.
+Only nationwide domestic Locker and Service Point products are auto-calculated. Radius does not guess PostNord Home zone/rural/island pricing without the full official postal-code surcharge model.
 
-## Deployment
+## Data freshness
 
-Vercel is the canonical deployment target and tracks `main`. The application has no deployment-time secrets and no server runtime.
+Tariffs are versioned in source with explicit effective/check dates. Dynamic providers remain live-quote-only unless their changing surcharge inputs are modeled explicitly.
+
+## Quality strategy
+
+Unit tests cover:
+- Finnish postal codes;
+- decimal input;
+- rotation-aware box matching;
+- Posti Åland tariff;
+- GLS mandatory home delivery;
+- PostNord volumetric weight;
+- PostNord fuel + VAT pipeline.
+
+Browser tests cover:
+- consumer comparison;
+- business/list-rate mode;
+- stale result invalidation on input edit;
+- validation;
+- accessibility;
+- mobile overflow.

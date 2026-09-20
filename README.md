@@ -1,182 +1,137 @@
-# Radius — Delivery Quote Lab
+# Radius Finland — Courier Price Engine
 
 [![Quality](https://github.com/MykolaDotsenko/test-assigment/actions/workflows/quality.yml/badge.svg)](https://github.com/MykolaDotsenko/test-assigment/actions/workflows/quality.yml)
 
-**A transparent delivery-fee explorer rebuilt from a small React/TypeScript home assignment into a production-minded frontend case study.**
+**A Finland-specific parcel and courier comparison engine built around verified carrier tariffs instead of generic delivery estimates.**
 
-[**Open the live app →**](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md) · [Browser tests](./e2e/radius.spec.ts)
+[**Open the live app →**](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md)
 
-Radius answers one practical question: **what will this delivery cost, and why?**
+## Why Finland-specific?
 
-Instead of treating the assignment as a form that prints five numbers, the product exposes the pricing contract: cart threshold, customer-to-venue distance, delivery range, fee composition, availability, and the next useful action when a small-order surcharge applies.
+A generic “price per kilometre” estimator cannot be genuinely accurate for parcel delivery. Finnish carriers use different commercial models:
 
-## Product capabilities
+- Posti: consumer parcel sizes;
+- Matkahuolto: consumer parcel sizes;
+- GLS: consumer weight bands plus pickup/door options;
+- PostNord: chargeable weight = max(actual, volumetric) plus fuel surcharge, VAT and possible handling fees;
+- FedEx / UPS / DHL: list rates plus dynamic fuel, area and handling surcharges;
+- DSV: contract/spot freight plus frequently changing fuel surcharges.
 
-- live venue static + dynamic pricing data
-- integer-cent cart parsing with decimal comma and decimal point support
-- manual coordinates or browser geolocation
-- quick Helsinki location presets for exploration
-- Haversine customer-to-venue distance
-- explicit delivery-range utilization
-- available vs outside-delivery-area product states
-- small-order threshold insight: exactly how much to add to remove the surcharge
-- inspectable cart / surcharge / delivery / distance / total breakdown
-- immediate stale-quote invalidation whenever a pricing input or location changes
-- previous request cancellation so stale responses cannot overwrite a newer quote
-- session-only recent estimates without persisting precise coordinates
-- responsive desktop/mobile layout
-- reduced-motion and forced-colors fallbacks
-- no analytics or tracking
+Radius therefore models each carrier separately and exposes an **accuracy label** for every result.
 
-## Why this project is different
+## Calculated carriers
 
-The original implementation had the core formula, but network fetching, geolocation, validation, pricing, and UI state all lived in one component. The single test submitted the form without asserting the result, and the README was still the default Vite template.
+### Posti — private sender
 
-The rebuild keeps the original problem and makes the engineering decisions visible:
+Official online/OmaPosti domestic prices from 2 June 2026:
+
+| Size | Maximum size | Price |
+| --- | --- | ---: |
+| XXS | 3 × 25 × 35 cm, 2 kg | €7.90 |
+| S | 11 × 32 × 42 cm | €9.90 |
+| M | 19 × 36 × 60 cm | €11.90 |
+| L | 36 × 37 × 60 cm | €16.90 |
+| XL | 40 × 60 × 100 cm | €22.90 |
+| XXL | longest side ≤ 200 cm, length + circumference ≤ 300 cm | €44.90 |
+
+Maximum weight for S–XXL is 25 kg. Radius also applies Posti's separate Åland tariff when a 22xxx postal code is involved.
+
+Source: https://www.posti.fi/en/sending/parcels/package-price-lists
+
+### Matkahuolto — private sender
+
+Current prices that the official public domestic page exposes directly:
+
+| Size | Maximum size | Price |
+| --- | --- | ---: |
+| XXS | 3 × 25 × 40 cm | €5.90 |
+| S | 10 × 40 × 55 cm | €8.80 |
+| M | 20 × 40 × 55 cm | €11.80 |
+
+Matkahuolto also offers larger sizes. Radius deliberately does **not** fill missing current consumer prices from old price lists.
+
+Source: https://www.matkahuolto.fi/packages/domestic-parcels
+
+### GLS Finland — private / occasional sender
+
+Official GLSpaketti.fi basic tariff:
+
+- max 1 kg — €24
+- max 3 kg — €29
+- max 15 kg — €59
+- max 25 kg — €79
+- pickup from sender — +€20 / shipment
+- delivery to recipient's door — +€5 / parcel
+- door delivery is mandatory above 15 kg
+
+Source: https://gls-group.com/FI/en/ship-with-gls/Consumers-Small-Businesses/
+
+### PostNord — business/list-rate mode
+
+Radius calculates PostNord **Automaatti** and **Palvelupiste** from the official 2026 list rate.
+
+Pricing basis:
 
 ```text
-React UI
-   |
-   +----> delivery domain <---- geo domain
-   |
-   +----> validated venue API adapter
-                 |
-                 +----> Fetch API / remote assignment API
+volumetric weight = volume m³ × 280 kg
+chargeable weight = max(actual weight, volumetric weight)
+base rate          = official weight band
++ special handling if triggered
++ 10.4% fuel surcharge (effective 1 Sep 2026)
++ 25.5% Finnish VAT
 ```
 
-The important boundaries are deliberate:
+These are list-rate calculations, not negotiated contract prices.
 
-- **Money enters the domain as integer cents**, not floating-point UI state.
-- **Remote JSON is treated as untrusted** and normalized before pricing uses it.
-- **Distance ranges are validated as a contract**: finite ranges must be valid, ranges may not overlap, and an open-ended `max = 0` sentinel may appear only at the end.
-- **Provider failure and out-of-range delivery are different states.**
-- **Editable form values remain strings** until submit, so partial input is not coerced into misleading numbers.
-- **Visible quotes are invalidated immediately** when price-affecting inputs change, so the UI never presents a total for different inputs.
-- **In-flight requests are abortable**, protecting the interface from response races.
-- **Precise coordinates are never persisted.**
+Sources:
+- https://www.postnord.fi/siteassets/pdf/hinnastot/online_hinnastoliite_2026-02-01.pdf
+- https://www.postnord.fi/en/sending/fuel-and-sulphur-surcharge
+- https://www.vero.fi/en/businesses-and-corporations/taxes-and-charges/vat/rates-of-vat/
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full dependency rules and state contract.
+## Carrier directory
 
-## Pricing model
+Radius also lists major operators that cannot be honestly reduced to one static public price:
 
-For a valid distance range, the home-assignment pricing formula is preserved:
+- FedEx — 2026 standard list rates + weekly fuel/area/handling surcharges
+- UPS — rate guide + fuel/remote/demand surcharges
+- DHL Express — live quote based on origin/destination, chargeable weight and service
+- DSV Parcel / Schenker — contract/spot pricing; domestic parcel fuel surcharge 16.86% from 16 Sep 2026
+- Bring — outbound shipments from Finland and domestic Finland services are discontinued
 
-```text
-delivery fee = base price + a + round(b × distance / 10)
-```
+The UI links directly to official carrier sources.
 
-The small-order surcharge is:
+## Engineering rules
 
-```text
-max(0, order minimum without surcharge - cart value)
-```
-
-And the quoted total is:
-
-```text
-cart value + small-order surcharge + delivery fee
-```
-
-Distance is calculated with the Haversine formula using the customer and venue coordinates.
+- fixed-size boxes are rotation-aware;
+- girth-based services use longest side + circumference;
+- Åland is treated separately where the official tariff differs;
+- no price is invented when an official current tariff is unavailable;
+- business and consumer prices are never silently mixed;
+- final carrier checkout/invoice remains authoritative.
 
 ## Stack
-
-### Runtime
 
 - React 19.3
 - TypeScript 6
 - Vite 8
-- native Fetch + AbortController
-- Geolocation API
-- Intl formatting APIs
-- custom responsive CSS
-
-Runtime dependencies are only **React and React DOM**. Radius deliberately has no API client package, router, state library, UI kit, animation runtime, map SDK, analytics SDK, or CSS framework.
-
-### Verification and delivery
-
-- Vitest 5
-- Playwright 1.63
-- axe-core browser accessibility checks
+- Vitest
+- Playwright
+- axe-core
 - ESLint 10
-- strict TypeScript
-- GitHub Actions on Node 24
-- Dependabot
-- Vercel production deployment from `main`
+- GitHub Actions
+- Vercel
 
-## Quality evidence
-
-Pure tests cover the behavior most likely to produce expensive regressions:
-
-- decimal money parsing without floating-point input drift
-- coordinate boundaries
-- venue-slug normalization
-- small-order surcharge arithmetic
-- distance-range matching
-- finite range validity, overlap prevention, and terminal-sentinel rules
-- delivery-fee calculation
-- explicit out-of-range quotes
-- Haversine invariants and a real Helsinki distance sanity check
-- malformed static/dynamic provider payloads
-
-Browser tests mock the remote provider at the HTTP boundary and verify:
-
-- a complete deterministic quote journey
-- stale quote removal when inputs change
-- a valid outside-delivery-area result
-- bounded provider HTTP errors
-- validation before any provider request
-- serious/critical WCAG A/AA regressions with axe
-- horizontal-overflow protection on desktop and mobile Chromium
-
-CI runs the static gate and browser suite on pull requests and `main`:
-
-```text
-ESLint
-→ TypeScript
-→ Vitest
-→ Vite production build
-→ Chromium install
-→ Playwright desktop + Pixel 7 profile
-→ axe accessibility checks
-```
-
-The production alias is **https://test-assigment-theta.vercel.app** and is deployed from the repository's `main` branch.
-
-## Accessibility and UX
-
-Radius uses native browser semantics before custom interaction code:
-
-- visible labels for every field
-- grouped coordinates via `fieldset` / `legend`
-- `aria-invalid` and field-specific error relationships
-- `role="alert"` for request failures
-- `aria-live` for quote results
-- native `meter` for distance utilization
-- keyboard-operable presets and actions
-- visible `:focus-visible` states
-- reduced-motion support
-- forced-colors fallback
-- no color-only distinction between available and unavailable states
-
-## Privacy boundary
-
-Browser geolocation is optional. If the user grants access, coordinates are used only to calculate the current quote. **Precise coordinates are not stored in localStorage, analytics, or a backend.** Recent estimates retain only cart value, distance, total, and availability for the current page session.
+Runtime dependencies remain React + React DOM only.
 
 ## Run locally
 
 ```bash
 npm ci
 npm run dev
-```
-
-Run all static/unit checks:
-
-```bash
 npm run check
 ```
 
-Install the browser once and run the end-to-end suite:
+For browser tests:
 
 ```bash
 npx playwright install chromium
@@ -185,8 +140,4 @@ npm run test:e2e
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
-
-## Repository evolution
-
-This repository intentionally preserves its origin as a technical assignment. The rebuild does not disguise that history. It demonstrates the follow-through expected in production work: model the domain explicitly, minimize the runtime surface, validate unreliable boundaries, design useful states, test the rules in isolation and in a browser, document the trade-offs, and ship a product surface that explains itself.
+MIT.
