@@ -56,6 +56,46 @@ describe("consumer quotes", () => {
     expect(gls?.details.join(" ")).toContain("mandatory");
   });
 
+  it("accepts the exact GLS girth boundary and rejects one centimetre over it", () => {
+    const exact = calculateQuotes({
+      ...base,
+      weightKg: 1,
+      lengthCm: 100,
+      widthCm: 50,
+      heightCm: 50,
+    });
+    const over = calculateQuotes({
+      ...base,
+      weightKg: 1,
+      lengthCm: 101,
+      widthCm: 50,
+      heightCm: 50,
+    });
+
+    expect(exact.some((quote) => quote.provider === "GLS Finland")).toBe(true);
+    expect(over.some((quote) => quote.provider === "GLS Finland")).toBe(false);
+  });
+
+  it("accepts Posti XXL exactly at its published longest-side and girth limits", () => {
+    const exact = calculateQuotes({
+      ...base,
+      weightKg: 25,
+      lengthCm: 200,
+      widthCm: 25,
+      heightCm: 25,
+    });
+    const overLongestSide = calculateQuotes({
+      ...base,
+      weightKg: 25,
+      lengthCm: 201,
+      widthCm: 24,
+      heightCm: 24,
+    });
+
+    expect(exact.find((quote) => quote.provider === "Posti")?.service).toContain("XXL");
+    expect(overLongestSide.some((quote) => quote.provider === "Posti")).toBe(false);
+  });
+
   it("uses Posti's Åland table instead of mainland pricing", () => {
     const quotes = calculateQuotes({ ...base, route: "aland" });
     const posti = quotes.find((quote) => quote.provider === "Posti");

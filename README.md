@@ -63,7 +63,7 @@ Current prices that the official public domestic page exposes directly:
 | S | 10 × 40 × 55 cm | €8.80 |
 | M | 20 × 40 × 55 cm | €11.80 |
 
-Matkahuolto also offers larger sizes. Pakettitutka deliberately does **not** fill missing current consumer prices from old price lists.
+Matkahuolto also offers larger sizes. Pakettitutka deliberately does **not** fill missing current consumer prices from old price lists. For Åland, Matkahuolto uses its international-parcel flow plus a ferry surcharge; Pakettitutka surfaces this as non-calculated coverage rather than inventing a flat total.
 
 Source: https://www.matkahuolto.fi/packages/domestic-parcels
 
@@ -124,7 +124,8 @@ The UI links directly to official carrier sources.
 - no price is invented when an official current tariff is unavailable;
 - public/no-contract and business-contract prices are never silently mixed;
 - PostNord fuel surcharge is applied to freight only, excluding additional-service fees;
-- final carrier checkout/invoice remains authoritative.
+- final carrier checkout/invoice remains authoritative;
+- unsupported dynamic/account pricing is explained explicitly instead of being approximated.
 
 ## Stack
 

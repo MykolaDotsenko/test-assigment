@@ -759,3 +759,26 @@
 .calculator-column .results-section {
   margin-top: 0;
 }
+
+
+.coverage-note {
+  display: grid;
+  gap: 5px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid rgba(28,117,84,.14);
+  border-radius: 16px;
+  background: rgba(238,248,242,.78);
+}
+
+.coverage-note strong {
+  color: var(--accent-strong);
+  font-size: .78rem;
+}
+
+.coverage-note p {
+  margin: 0;
+  color: #536159;
+  font-size: .76rem;
+  line-height: 1.55;
+}

@@ -15,6 +15,21 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
       ? secondPrice - bestPrice
       : null;
   const routeLabel = input.route === "aland" ? "Mainland Finland ↔ Åland" : "Mainland Finland";
+  const coverage =
+    input.audience === "business"
+      ? {
+          title: "What this comparison covers",
+          body: "Published PostNord list rates are calculated here. FedEx, UPS, DHL Express and DSV remain official live/account quotes because their final prices depend on changing or contract-specific inputs.",
+        }
+      : input.route === "aland"
+        ? {
+            title: "Åland coverage",
+            body: "Posti is calculated from its published Åland tariff. Matkahuolto also serves Åland, but its Åland flow uses international-parcel pricing plus a ferry surcharge, so Pakettitutka does not invent a single total.",
+          }
+        : {
+            title: "What this comparison covers",
+            body: "Pakettitutka calculates the public tariffs it can reproduce from published rules. Carriers whose final price depends on live, lane-specific or account pricing stay in the directory as official quote links.",
+          };
 
   return (
     <section className="results-section" data-test-id="results" aria-live="polite" aria-labelledby="results-title">
@@ -33,6 +48,11 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
           </div>
         )}
       </div>
+
+      <aside className="coverage-note" aria-label={coverage.title}>
+        <strong>{coverage.title}</strong>
+        <p>{coverage.body}</p>
+      </aside>
 
       {quotes.length === 0 ? (
         <div className="empty-result">
