@@ -21,6 +21,7 @@ Instead of treating the assignment as a form that prints five numbers, the produ
 - available vs outside-delivery-area product states
 - small-order threshold insight: exactly how much to add to remove the surcharge
 - inspectable cart / surcharge / delivery / distance / total breakdown
+- immediate stale-quote invalidation whenever a pricing input or location changes
 - previous request cancellation so stale responses cannot overwrite a newer quote
 - session-only recent estimates without persisting precise coordinates
 - responsive desktop/mobile layout
@@ -47,9 +48,10 @@ The important boundaries are deliberate:
 
 - **Money enters the domain as integer cents**, not floating-point UI state.
 - **Remote JSON is treated as untrusted** and normalized before pricing uses it.
-- **`max = 0` is modeled as an unavailable-distance sentinel**, not hidden behind a magic `-1` fee.
+- **Distance ranges are validated as a contract**: finite ranges must be valid, ranges may not overlap, and an open-ended `max = 0` sentinel may appear only at the end.
 - **Provider failure and out-of-range delivery are different states.**
 - **Editable form values remain strings** until submit, so partial input is not coerced into misleading numbers.
+- **Visible quotes are invalidated immediately** when price-affecting inputs change, so the UI never presents a total for different inputs.
 - **In-flight requests are abortable**, protecting the interface from response races.
 - **Precise coordinates are never persisted.**
 
@@ -100,7 +102,7 @@ Runtime dependencies are only **React and React DOM**. Radius deliberately has n
 - strict TypeScript
 - GitHub Actions on Node 24
 - Dependabot
-- Vercel deployment
+- Vercel production deployment from `main`
 
 ## Quality evidence
 
@@ -111,7 +113,7 @@ Pure tests cover the behavior most likely to produce expensive regressions:
 - venue-slug normalization
 - small-order surcharge arithmetic
 - distance-range matching
-- `max = 0` unavailable sentinel semantics
+- finite range validity, overlap prevention, and terminal-sentinel rules
 - delivery-fee calculation
 - explicit out-of-range quotes
 - Haversine invariants and a real Helsinki distance sanity check
@@ -120,12 +122,14 @@ Pure tests cover the behavior most likely to produce expensive regressions:
 Browser tests mock the remote provider at the HTTP boundary and verify:
 
 - a complete deterministic quote journey
+- stale quote removal when inputs change
 - a valid outside-delivery-area result
+- bounded provider HTTP errors
 - validation before any provider request
 - serious/critical WCAG A/AA regressions with axe
 - horizontal-overflow protection on desktop and mobile Chromium
 
-CI runs the static gate and browser suite on pull requests:
+CI runs the static gate and browser suite on pull requests and `main`:
 
 ```text
 ESLint
@@ -136,6 +140,8 @@ ESLint
 → Playwright desktop + Pixel 7 profile
 → axe accessibility checks
 ```
+
+The production alias is **https://test-assigment-theta.vercel.app** and is deployed from the repository's `main` branch.
 
 ## Accessibility and UX
 
@@ -176,6 +182,10 @@ Install the browser once and run the end-to-end suite:
 npx playwright install chromium
 npm run test:e2e
 ```
+
+## License
+
+MIT. See [LICENSE](./LICENSE).
 
 ## Repository evolution
 

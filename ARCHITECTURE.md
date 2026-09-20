@@ -41,18 +41,19 @@ Owns the Haversine calculation. It is deterministic and browser-independent.
 
 Owns HTTP concerns and the trust boundary around the remote API.
 
-Both static and dynamic venue payloads are fetched in parallel with native Fetch. Unknown JSON is validated and normalized into one `VenueProfile` before pricing can consume it. HTTP failure, timeout, malformed data, and an unknown venue slug are translated into bounded product errors.
+Both static and dynamic venue payloads are fetched in parallel with native Fetch. Unknown JSON is validated and normalized into one `VenueProfile` before pricing can consume it. HTTP failure, timeout, malformed data, invalid geographic coordinates, overlapping distance ranges, invalid finite ranges, and a misplaced open-ended sentinel are rejected at the boundary rather than leaking ambiguous state into pricing.
 
 ### `src/components/Calculator.tsx`
 
 Owns orchestration only:
 
 1. validate editable strings;
-2. cancel the previous in-flight quote;
-3. fetch a normalized venue profile;
-4. calculate distance;
-5. call the pricing domain;
-6. render success, out-of-range, or failure state.
+2. invalidate any visible quote before a new pricing state is shown;
+3. cancel the previous in-flight quote;
+4. fetch a normalized venue profile;
+5. calculate distance;
+6. call the pricing domain;
+7. render success, out-of-range, or failure state.
 
 Geolocation is a progressive convenience. Manual coordinates remain the resilient path.
 
@@ -60,6 +61,8 @@ Geolocation is a progressive convenience. Manual coordinates remain the resilien
 
 - Form fields remain strings until submit so incomplete user input is not coerced into misleading numbers.
 - Money becomes integer cents before entering the pricing domain.
+- Any change to venue, cart, or customer location immediately invalidates the visible quote.
+- Reset aborts an in-flight request and clears quote/error state while preserving session history.
 - A new request aborts the previous request to prevent stale responses from winning a race.
 - Precise coordinates are not persisted.
 - Recent estimates are session-only presentation state.
@@ -85,9 +88,11 @@ Pure pricing + geo functions
 
 The browser suite uses deterministic mocked provider responses so it can verify product behavior without coupling CI reliability to a third-party development API.
 
+Browser coverage explicitly checks successful quotes, stale-result invalidation, provider failure, outside-area behavior, client-side validation, accessibility, and responsive overflow.
+
 ## Quality gate
 
-Pull requests run:
+Pull requests and `main` run:
 
 ```bash
 npm ci
@@ -100,3 +105,7 @@ npm run test:e2e
 ```
 
 The browser matrix covers desktop Chromium and a Pixel 7 profile. Axe checks the completed quote state for serious/critical WCAG A/AA regressions. Failures retain Playwright traces and screenshots where applicable.
+
+## Deployment
+
+Vercel is the canonical deployment target and tracks `main`. The application has no deployment-time secrets and no server runtime.
