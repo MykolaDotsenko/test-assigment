@@ -27,7 +27,7 @@ Pakettitutka therefore models each carrier separately and exposes an **accuracy 
 - transparent pricing confidence instead of a misleading single “estimate”;
 - official tariff links embedded directly in results and carrier cards;
 - separate public/no-contract and published business list-rate modes;
-- no GPS, street address, exact destination or account required for the modeled tariffs;
+- no GPS or street address required; an optional business destination postcode is used only to detect PostNord's location-specific island/ferry surcharge;
 - mainland-vs-Åland route selection asks only for location detail that changes a price;
 - accessible controls, focus states and reduced-motion support;
 - Finland-first visual system with a dedicated Pakettitutka asset library.
@@ -128,6 +128,7 @@ The UI links directly to official carrier sources.
 - no price is invented when an official current tariff is unavailable;
 - public/no-contract and published business list-rate prices are never silently mixed;
 - PostNord fuel surcharge is applied to freight only, excluding additional-service fees;
+- PostNord's €11.63 island/ferry surcharge is applied for official Finnish surcharge postcodes when an optional destination postcode is supplied;
 - final carrier checkout/invoice remains authoritative;
 - unsupported dynamic/account pricing is explained explicitly instead of being approximated.
 

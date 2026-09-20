@@ -121,3 +121,28 @@ test("guides unsupported shipments to live-quote carriers", async ({ page }) => 
   await expect(results.getByText("No tariff-backed option fits these inputs.")).toBeVisible();
   await expect(results.getByRole("link", { name: /Browse live-quote carriers/ })).toHaveAttribute("href", "#providers");
 });
+
+
+test("applies PostNord island and ferry surcharge from an optional destination postcode", async ({ page }) => {
+  await page.getByRole("button", { name: "Business list rates" }).click();
+  await page.locator('[data-test-id="destinationPostalCode"]').fill("00190");
+  await page.locator('[data-test-id="weightKg"]').fill("1");
+  await page.locator('[data-test-id="lengthCm"]').fill("15");
+  await page.locator('[data-test-id="widthCm"]').fill("10");
+  await page.locator('[data-test-id="heightCm"]').fill("1.5");
+  await page.locator('[data-test-id="comparePrices"]').click();
+
+  const results = page.locator('[data-test-id="results"]');
+  await results.getByText("Calculation details").first().click();
+  await expect(results.getByText("Island/ferry surcharge: +€11.63 excl. VAT").first()).toBeVisible();
+  await expect(results).toContainText("destination 00190");
+});
+
+test("validates the optional business destination postcode without requiring it", async ({ page }) => {
+  await page.getByRole("button", { name: "Business list rates" }).click();
+  await page.locator('[data-test-id="destinationPostalCode"]').fill("1234");
+  await page.locator('[data-test-id="comparePrices"]').click();
+
+  await expect(page.getByText("Use a 5-digit Finnish postal code or leave it blank.")).toBeVisible();
+  await expect(page.getByText("Comparison", { exact: true })).toHaveCount(0);
+});

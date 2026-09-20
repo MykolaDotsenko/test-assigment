@@ -3,6 +3,8 @@ import {
   calculateQuotes,
   parsePositiveNumber,
   POSTNORD_FUEL_SURCHARGE,
+  POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS,
+  isPostNordIslandFerryPostalCode,
   VAT_RATE,
   type ParcelInput,
 } from "./finlandTariffs";
@@ -190,6 +192,42 @@ describe("consumer quotes", () => {
 });
 
 describe("PostNord contract pricing", () => {
+  it("recognizes the official Finnish island/ferry postcode list", () => {
+    expect(POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS).toBe(1163);
+    expect(isPostNordIslandFerryPostalCode("00190")).toBe(true);
+    expect(isPostNordIslandFerryPostalCode("21660")).toBe(true);
+    expect(isPostNordIslandFerryPostalCode("00100")).toBe(false);
+  });
+
+  it("adds the PostNord island/ferry surcharge when a matching destination postcode is supplied", () => {
+    const quotes = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 1,
+      lengthCm: 15,
+      widthCm: 10,
+      heightCm: 1.5,
+      destinationPostalCode: "00190",
+    });
+
+    const locker = quotes.find((item) => item.id === "postnord-locker");
+    const servicePoint = quotes.find((item) => item.id === "postnord-service-point");
+
+    expect(locker?.priceCents).toBe(2139);
+    expect(servicePoint?.priceCents).toBe(2166);
+    expect(locker?.details.join(" ")).toContain("Island/ferry surcharge: +€11.63");
+  });
+
+  it("does not add an island/ferry surcharge for a standard mainland postcode", () => {
+    const quote = calculateQuotes({
+      ...base,
+      audience: "business",
+      destinationPostalCode: "00100",
+    }).find((item) => item.id === "postnord-locker");
+
+    expect(quote?.priceCents).toBe(679);
+    expect(quote?.details.join(" ")).toContain("No PostNord island/ferry surcharge");
+  });
   it.each([
     { weightKg: 0.25, lockerCents: 679, servicePointCents: 707 },
     { weightKg: 1, lockerCents: 679, servicePointCents: 707 },

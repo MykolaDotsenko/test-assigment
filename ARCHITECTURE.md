@@ -8,6 +8,7 @@ Pakettitutka is a carrier-specific tariff engine. It intentionally does not shar
 shipment inputs
   ├─ route scope: mainland or Åland
   ├─ pricing mode: public/no-contract or published business list rate
+  ├─ optional business destination postcode for PostNord island/ferry surcharge
   ├─ actual weight
   └─ dimensions
         ↓
@@ -60,7 +61,7 @@ max(actual, volumetric)
 → Finnish VAT
 ```
 
-Only nationwide domestic Locker and Service Point products are auto-calculated. Pakettitutka does not guess PostNord Home zone/rural/island pricing without the full official postal-code surcharge model.
+Only nationwide domestic Locker and Service Point products are auto-calculated. An optional destination postcode is checked against PostNord's official Finnish island/ferry surcharge list; matching postcodes add the published €11.63 fee before VAT. Pakettitutka does not guess PostNord Home zone/rural/island pricing without the full official postal-code surcharge model.
 
 ## Data freshness
 
@@ -77,6 +78,7 @@ Unit tests cover:
 - GLS mandatory home delivery;
 - PostNord volumetric weight;
 - PostNord fuel + VAT pipeline;
+- PostNord island/ferry postcode surcharge detection;
 - exclusion of additional-service fees from the fuel-surcharge base.
 
 Browser tests cover:

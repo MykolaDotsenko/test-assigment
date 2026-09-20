@@ -11,6 +11,7 @@ export interface ParcelInput {
   audience: Audience;
   glsPickup: boolean;
   glsHomeDelivery: boolean;
+  destinationPostalCode?: string;
 }
 
 export interface Quote {
@@ -42,6 +43,14 @@ export interface ProviderDirectoryEntry {
 export const VAT_RATE = 0.255;
 export const POSTNORD_FUEL_SURCHARGE = 0.104;
 export const TARIFF_SNAPSHOT_DATE = "2026-09-20";
+export const POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS = 1163;
+
+const POSTNORD_FINLAND_ISLAND_FERRY_POSTCODES = new Set([
+  "00190", "07370", "10270", "21650", "21660", "21661", "21670", "21680",
+  "21710", "21720", "21740", "21750", "21760", "21770", "23390", "25910",
+  "25940", "25950", "25960", "56350", "65800", "65870", "65920", "65930",
+  "65970", "66220", "83910", "90480",
+]);
 
 const POSTI_URL = "https://www.posti.fi/en/sending/parcels/package-price-lists";
 const MATKAHUOLTO_URL = "https://www.matkahuolto.fi/packages/domestic-parcels";
@@ -314,6 +323,10 @@ function bandPrice(weight: number, bands: WeightBand[]): number | null {
   return bands.find((band) => weight <= band.maxKg)?.cents ?? null;
 }
 
+export function isPostNordIslandFerryPostalCode(postalCode: string): boolean {
+  return POSTNORD_FINLAND_ISLAND_FERRY_POSTCODES.has(postalCode.trim());
+}
+
 function grossPostNordPrice(baseCents: number, additionalServiceCents = 0): {
   baseCents: number;
   additionalServiceCents: number;
@@ -369,7 +382,13 @@ function quotePostNord(
   const specialHandling =
     longest > 120 || [input.lengthCm, input.widthCm, input.heightCm].filter((v) => v > 60).length >= 2;
   const specialHandlingCents = specialHandling ? 460 : 0;
-  const priced = grossPostNordPrice(baseCents, specialHandlingCents);
+  const islandFerrySurchargeCents =
+    input.destinationPostalCode &&
+    isPostNordIslandFerryPostalCode(input.destinationPostalCode)
+      ? POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS
+      : 0;
+  const additionalServiceCents = specialHandlingCents + islandFerrySurchargeCents;
+  const priced = grossPostNordPrice(baseCents, additionalServiceCents);
 
   return {
     id: `postnord-${service}`,
@@ -383,7 +402,7 @@ function quotePostNord(
     accuracy: "exact-list",
     deliveryTime: "1–2 business days",
     explanation:
-      "Calculated from PostNord's 2026 list rate using chargeable weight, current September parcel fuel surcharge and Finnish VAT. Your negotiated contract rate may differ.",
+      "Calculated from PostNord's 2026 list rate using chargeable weight, current September parcel fuel surcharge and Finnish VAT. Location-specific island/ferry surcharge is included when a destination postcode is supplied. Your negotiated contract rate may differ.",
     sourceLabel: "PostNord 2026 service price list",
     sourceUrl: POSTNORD_URL,
     effectiveDate: "2026-09-01 fuel surcharge",
@@ -393,6 +412,11 @@ function quotePostNord(
       `Chargeable weight: ${chargeableWeight.toFixed(2)} kg`,
       `Base freight: €${(baseCents / 100).toFixed(2)} excl. VAT`,
       specialHandling ? "Special handling: +€4.60 excl. VAT" : "No special-handling fee triggered",
+      islandFerrySurchargeCents
+        ? "Island/ferry surcharge: +€11.63 excl. VAT"
+        : input.destinationPostalCode
+          ? "No PostNord island/ferry surcharge for the supplied destination postcode"
+          : "Island/ferry surcharge not checked — add a destination postcode for location-specific verification",
       `Fuel surcharge: 10.4% of freight (€${(priced.fuelCents / 100).toFixed(2)})`,
       `VAT 25.5%: €${(priced.vatCents / 100).toFixed(2)}`,
     ],

@@ -21,7 +21,12 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
     bestPrice !== null && secondPrice !== null && secondPrice > bestPrice
       ? secondPrice - bestPrice
       : null;
-  const routeLabel = input.route === "aland" ? "Mainland Finland ↔ Åland" : "Mainland Finland";
+  const routeLabel =
+    input.route === "aland"
+      ? "Mainland Finland ↔ Åland"
+      : input.destinationPostalCode
+        ? `Mainland Finland · destination ${input.destinationPostalCode}`
+        : "Mainland Finland";
   const coverage =
     input.audience === "business" && input.route === "aland"
       ? {
