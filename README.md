@@ -143,7 +143,7 @@ The UI links directly to official carrier sources.
 - GitHub Actions
 - Vercel
 
-Runtime dependencies remain React + React DOM only.
+Runtime dependencies remain React + React DOM only. CI also audits production dependencies at high severity, runs lint/typecheck/unit/build, and exercises desktop/mobile Playwright + axe accessibility checks.
 
 ## Run locally
 
