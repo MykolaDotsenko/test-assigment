@@ -11,6 +11,11 @@ const statusLabel = {
 
 const DAY_MS = 86_400_000;
 const STALE_AFTER_DAYS = 31;
+const SNAPSHOT_AGE_DAYS = Math.max(
+  0,
+  Math.floor((Date.now() - Date.parse(`${TARIFF_SNAPSHOT_DATE}T00:00:00Z`)) / DAY_MS),
+);
+const SNAPSHOT_IS_STALE = SNAPSHOT_AGE_DAYS > STALE_AFTER_DAYS;
 
 function sourceAction(status: (typeof PROVIDER_DIRECTORY)[number]["status"]) {
   if (status === "live-quote") return "Official service / pricing ↗";
@@ -21,12 +26,6 @@ function sourceAction(status: (typeof PROVIDER_DIRECTORY)[number]["status"]) {
 export default function ProviderDirectory() {
   const calculatedCount = PROVIDER_DIRECTORY.filter((entry) => entry.status === "calculated").length;
   const liveQuoteCount = PROVIDER_DIRECTORY.filter((entry) => entry.status === "live-quote").length;
-  const snapshotAgeDays = Math.max(
-    0,
-    Math.floor((Date.now() - Date.parse(`${TARIFF_SNAPSHOT_DATE}T00:00:00Z`)) / DAY_MS),
-  );
-  const snapshotIsStale = snapshotAgeDays > STALE_AFTER_DAYS;
-
   return (
     <section className="directory-section" id="providers" aria-labelledby="directory-title">
       <div className="directory-heading">
@@ -44,11 +43,11 @@ export default function ProviderDirectory() {
         <span>Reviewed <strong>{TARIFF_SNAPSHOT_DATE}</strong></span>
       </div>
 
-      {snapshotIsStale && (
+      {SNAPSHOT_IS_STALE && (
         <div className="freshness-warning" role="status">
           <strong>Tariff review due.</strong>
           <span>
-            This snapshot is {snapshotAgeDays} days old. Treat calculated prices as a comparison aid and verify the linked official source before buying.
+            This snapshot is {SNAPSHOT_AGE_DAYS} days old. Treat calculated prices as a comparison aid and verify the linked official source before buying.
           </span>
         </div>
       )}
