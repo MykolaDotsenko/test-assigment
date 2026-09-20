@@ -1,3 +1,37 @@
+import {
+  BRING_URL,
+  BUDBEE_URL,
+  DHL_FREIGHT_URL,
+  DHL_URL,
+  DSV_URL,
+  FEDEX_URL,
+  GLS_URL,
+  JETPAK_URL,
+  KAUKOKIITO_URL,
+  MATKAHUOLTO_PUBLIC_BOXES,
+  MATKAHUOLTO_URL,
+  POSTI_BOXES,
+  POSTI_URL,
+  POSTNORD_FINLAND_ISLAND_FERRY_POSTCODES,
+  POSTNORD_FUEL_SURCHARGE,
+  POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS,
+  POSTNORD_LOCKER_BANDS,
+  POSTNORD_SERVICE_POINT_BANDS,
+  POSTNORD_URL,
+  TARIFF_SNAPSHOT_DATE,
+  UPS_URL,
+  VAT_RATE,
+  type BoxTariffData,
+  type WeightBandData,
+} from "../data/finlandTariffData";
+
+export {
+  POSTNORD_FUEL_SURCHARGE,
+  POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS,
+  TARIFF_SNAPSHOT_DATE,
+  VAT_RATE,
+} from "../data/finlandTariffData";
+
 export type Audience = "consumer" | "business";
 export type RouteScope = "mainland" | "aland";
 export type Accuracy = "exact-public" | "exact-list" | "live-quote" | "inactive";
@@ -11,6 +45,7 @@ export interface ParcelInput {
   audience: Audience;
   glsPickup: boolean;
   glsHomeDelivery: boolean;
+  destinationPostalCode?: string;
 }
 
 export interface Quote {
@@ -39,88 +74,7 @@ export interface ProviderDirectoryEntry {
   freshness: string;
 }
 
-export const VAT_RATE = 0.255;
-export const POSTNORD_FUEL_SURCHARGE = 0.104;
-export const TARIFF_SNAPSHOT_DATE = "2026-09-20";
 
-const POSTI_URL = "https://www.posti.fi/en/sending/parcels/package-price-lists";
-const MATKAHUOLTO_URL = "https://www.matkahuolto.fi/packages/domestic-parcels";
-const GLS_URL = "https://gls-group.com/FI/en/ship-with-gls/Consumers-Small-Businesses/";
-const POSTNORD_URL =
-  "https://www.postnord.fi/siteassets/pdf/hinnastot/online_hinnastoliite_2026-02-01.pdf";
-const FEDEX_URL = "https://www.fedex.com/en-fi/shipping/rates/fedex-rates.html";
-const UPS_URL = "https://www.ups.com/fi/en/support/shipping-support/shipping-costs-rates";
-const DHL_URL = "https://www.dhl.com/fi-en/home/express.html";
-const DSV_URL =
-  "https://www.dsv.com/fi-fi/palvelumme/kuljetusmuodot/maantiekuljetukset/rahtilisat/polttoainelisat";
-const BRING_URL = "https://www.bring.fi/";
-const BUDBEE_URL = "https://www.instabee.com/";
-const KAUKOKIITO_URL = "https://www.kaukokiito.fi/en/";
-const JETPAK_URL = "https://jetpak.com/fi/";
-const DHL_FREIGHT_URL =
-  "https://www.dhl.com/fi-en/home/freight/help-center-for-european-road-and-rail/dhl-freight-surcharges.html";
-
-interface BoxTariff {
-  name: string;
-  max: [number, number, number];
-  maxWeightKg: number;
-  min?: [number, number, number];
-  minWeightKg?: number;
-  priceCents: number;
-  alandPriceCents?: number;
-}
-
-const POSTI_BOXES: BoxTariff[] = [
-  {
-    name: "XXS",
-    max: [3, 25, 35],
-    maxWeightKg: 2,
-    min: [1, 15, 15],
-    minWeightKg: 0.1,
-    priceCents: 790,
-  },
-  { name: "S", max: [11, 32, 42], maxWeightKg: 25, priceCents: 990, alandPriceCents: 1490 },
-  { name: "M", max: [19, 36, 60], maxWeightKg: 25, priceCents: 1190, alandPriceCents: 1690 },
-  { name: "L", max: [36, 37, 60], maxWeightKg: 25, priceCents: 1690, alandPriceCents: 2090 },
-  { name: "XL", max: [40, 60, 100], maxWeightKg: 25, priceCents: 2290, alandPriceCents: 2690 },
-];
-
-const MATKAHUOLTO_PUBLIC_BOXES: BoxTariff[] = [
-  { name: "XXS", max: [3, 25, 40], maxWeightKg: 30, priceCents: 590 },
-  { name: "S", max: [10, 40, 55], maxWeightKg: 30, priceCents: 880 },
-  { name: "M", max: [20, 40, 55], maxWeightKg: 30, priceCents: 1180 },
-];
-
-interface WeightBand {
-  maxKg: number;
-  cents: number;
-}
-
-const POSTNORD_LOCKER_BANDS: WeightBand[] = [
-  { maxKg: 0.25, cents: 490 },
-  { maxKg: 0.5, cents: 490 },
-  { maxKg: 1, cents: 490 },
-  { maxKg: 2, cents: 537 },
-  { maxKg: 3, cents: 537 },
-  { maxKg: 5, cents: 548 },
-  { maxKg: 10, cents: 558 },
-  { maxKg: 15, cents: 593 },
-  { maxKg: 20, cents: 593 },
-];
-
-const POSTNORD_SERVICE_POINT_BANDS: WeightBand[] = [
-  { maxKg: 0.25, cents: 510 },
-  { maxKg: 0.5, cents: 510 },
-  { maxKg: 1, cents: 510 },
-  { maxKg: 2, cents: 558 },
-  { maxKg: 3, cents: 568 },
-  { maxKg: 5, cents: 568 },
-  { maxKg: 10, cents: 578 },
-  { maxKg: 15, cents: 593 },
-  { maxKg: 20, cents: 593 },
-  { maxKg: 25, cents: 603 },
-  { maxKg: 30, cents: 619 },
-];
 
 function sortedDimensions(input: ParcelInput): [number, number, number] {
   return [input.lengthCm, input.widthCm, input.heightCm].sort((a, b) => a - b) as [
@@ -130,7 +84,7 @@ function sortedDimensions(input: ParcelInput): [number, number, number] {
   ];
 }
 
-function fitsRotatableBox(input: ParcelInput, box: BoxTariff): boolean {
+function fitsRotatableBox(input: ParcelInput, box: BoxTariffData): boolean {
   if (input.weightKg > box.maxWeightKg) return false;
   if (box.minWeightKg !== undefined && input.weightKg < box.minWeightKg) return false;
 
@@ -172,7 +126,7 @@ function quotePosti(input: ParcelInput): Quote | null {
       audience: "consumer",
       priceCents,
       accuracy: "exact-public",
-      deliveryTime: "1–3 business days",
+      deliveryTime: box.name === "XXS" ? "Approx. 2–3 business days" : "1–3 business days",
       explanation: aland
         ? "Official Posti online price to/from Åland for the smallest fitting parcel size."
         : "Official Posti online/OmaPosti domestic price for the smallest fitting parcel size.",
@@ -188,7 +142,19 @@ function quotePosti(input: ParcelInput): Quote | null {
   }
 
   const { longest, lengthPlusGirth } = longestAndGirth(input);
-  if (input.weightKg <= 25 && longest <= 200 && lengthPlusGirth <= 300) {
+  const regularMinimum = [1, 15, 25];
+  const meetsRegularMinimum =
+    input.weightKg >= 0.1 &&
+    sortedDimensions(input).every(
+      (dimension, index) => dimension >= regularMinimum[index],
+    );
+
+  if (
+    meetsRegularMinimum &&
+    input.weightKg <= 25 &&
+    longest <= 200 &&
+    lengthPlusGirth <= 300
+  ) {
     return {
       id: "posti-xxl",
       provider: "Posti",
@@ -278,7 +244,7 @@ function quoteGls(input: ParcelInput): Quote | null {
     audience: "consumer",
     priceCents: total,
     accuracy: "exact-public",
-    deliveryTime: "GLS domestic parcel service",
+    deliveryTime: "Service-dependent ETA",
     explanation:
       "Official GLSparcel.fi basic tariff with the selected pickup and door-delivery surcharges applied.",
     sourceLabel: "GLS Finland consumer price list",
@@ -298,8 +264,12 @@ function postNordChargeableWeight(input: ParcelInput): number {
   return Math.max(input.weightKg, volumeM3 * 280);
 }
 
-function bandPrice(weight: number, bands: WeightBand[]): number | null {
+function bandPrice(weight: number, bands: WeightBandData[]): number | null {
   return bands.find((band) => weight <= band.maxKg)?.cents ?? null;
+}
+
+export function isPostNordIslandFerryPostalCode(postalCode: string): boolean {
+  return POSTNORD_FINLAND_ISLAND_FERRY_POSTCODES.has(postalCode.trim());
 }
 
 function grossPostNordPrice(baseCents: number, additionalServiceCents = 0): {
@@ -357,7 +327,13 @@ function quotePostNord(
   const specialHandling =
     longest > 120 || [input.lengthCm, input.widthCm, input.heightCm].filter((v) => v > 60).length >= 2;
   const specialHandlingCents = specialHandling ? 460 : 0;
-  const priced = grossPostNordPrice(baseCents, specialHandlingCents);
+  const islandFerrySurchargeCents =
+    input.destinationPostalCode &&
+    isPostNordIslandFerryPostalCode(input.destinationPostalCode)
+      ? POSTNORD_ISLAND_FERRY_SURCHARGE_CENTS
+      : 0;
+  const additionalServiceCents = specialHandlingCents + islandFerrySurchargeCents;
+  const priced = grossPostNordPrice(baseCents, additionalServiceCents);
 
   return {
     id: `postnord-${service}`,
@@ -371,7 +347,7 @@ function quotePostNord(
     accuracy: "exact-list",
     deliveryTime: "1–2 business days",
     explanation:
-      "Calculated from PostNord's 2026 list rate using chargeable weight, current September parcel fuel surcharge and Finnish VAT. Your negotiated contract rate may differ.",
+      "Calculated from PostNord's 2026 list rate using chargeable weight, current September parcel fuel surcharge and Finnish VAT. Location-specific island/ferry surcharge is included when a destination postcode is supplied. Your negotiated contract rate may differ.",
     sourceLabel: "PostNord 2026 service price list",
     sourceUrl: POSTNORD_URL,
     effectiveDate: "2026-09-01 fuel surcharge",
@@ -381,6 +357,11 @@ function quotePostNord(
       `Chargeable weight: ${chargeableWeight.toFixed(2)} kg`,
       `Base freight: €${(baseCents / 100).toFixed(2)} excl. VAT`,
       specialHandling ? "Special handling: +€4.60 excl. VAT" : "No special-handling fee triggered",
+      islandFerrySurchargeCents
+        ? "Island/ferry surcharge: +€11.63 excl. VAT"
+        : input.destinationPostalCode
+          ? "No PostNord island/ferry surcharge for the supplied destination postcode"
+          : "Island/ferry surcharge not checked — add a destination postcode for location-specific verification",
       `Fuel surcharge: 10.4% of freight (€${(priced.fuelCents / 100).toFixed(2)})`,
       `VAT 25.5%: €${(priced.vatCents / 100).toFixed(2)}`,
     ],
@@ -545,7 +526,10 @@ export function formatPrice(cents: number | null): string {
 }
 
 export function parsePositiveNumber(raw: string): number | null {
-  const value = Number(raw.trim().replace(",", "."));
+  const normalized = raw.trim().replace(",", ".");
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+
+  const value = Number(normalized);
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 

@@ -19,21 +19,23 @@ interface FormState {
   audience: Audience;
   glsPickup: boolean;
   glsHomeDelivery: boolean;
+  destinationPostalCode: string;
 }
 
 const DEFAULT_FORM: FormState = {
   route: "mainland",
   weightKg: "1",
-  lengthCm: "20",
+  lengthCm: "25",
   widthCm: "15",
   heightCm: "5",
   audience: "consumer",
   glsPickup: false,
   glsHomeDelivery: false,
+  destinationPostalCode: "",
 };
 
 const PARCEL_PRESETS = [
-  { label: "Small", hint: "20 × 15 × 5 cm · 1 kg", weightKg: "1", lengthCm: "20", widthCm: "15", heightCm: "5" },
+  { label: "Small", hint: "25 × 15 × 5 cm · 1 kg", weightKg: "1", lengthCm: "25", widthCm: "15", heightCm: "5" },
   { label: "Medium", hint: "40 × 30 × 20 cm · 3 kg", weightKg: "3", lengthCm: "40", widthCm: "30", heightCm: "20" },
   { label: "Large", hint: "60 × 40 × 35 cm · 8 kg", weightKg: "8", lengthCm: "60", widthCm: "40", heightCm: "35" },
 ] as const;
@@ -48,7 +50,20 @@ export default function Calculator() {
   const quotes = useMemo(() => (submitted ? calculateQuotes(submitted) : []), [submitted]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+
+      if (next.audience !== "consumer" || next.route !== "mainland") {
+        next.glsPickup = false;
+        next.glsHomeDelivery = false;
+      }
+
+      if (next.audience !== "business" || next.route !== "mainland") {
+        next.destinationPostalCode = "";
+      }
+
+      return next;
+    });
     setErrors((current) => ({ ...current, [key]: undefined }));
     setSubmitted(null);
   };
@@ -78,6 +93,14 @@ export default function Calculator() {
     if (lengthCm === null) nextErrors.lengthCm = "Enter a positive length.";
     if (widthCm === null) nextErrors.widthCm = "Enter a positive width.";
     if (heightCm === null) nextErrors.heightCm = "Enter a positive height.";
+    if (
+      form.audience === "business" &&
+      form.route === "mainland" &&
+      form.destinationPostalCode.trim() !== "" &&
+      !/^\d{5}$/.test(form.destinationPostalCode.trim())
+    ) {
+      nextErrors.destinationPostalCode = "Use a 5-digit Finnish postal code or leave it blank.";
+    }
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0 || !weightKg || !lengthCm || !widthCm || !heightCm) return;
@@ -91,6 +114,10 @@ export default function Calculator() {
       audience: form.audience,
       glsPickup: form.glsPickup,
       glsHomeDelivery: form.glsHomeDelivery,
+      destinationPostalCode:
+        form.audience === "business" && form.route === "mainland"
+          ? form.destinationPostalCode.trim() || undefined
+          : undefined,
     });
   };
 
@@ -133,7 +160,15 @@ export default function Calculator() {
 
         <div className="hero-visual" aria-hidden="true">
           <div className="hero-visual-glow" />
-          <img src="/brand/visuals/hero-finland.webp" alt="" width="1100" height="1100" />
+          <img
+            src="/brand/visuals/hero-finland.webp"
+            alt=""
+            width="1100"
+            height="1100"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+          />
           <div className="hero-float hero-float--top">
             <span>Tariff scope</span>
             <strong>Finland-first</strong>
@@ -180,7 +215,7 @@ export default function Calculator() {
                 </button>
               </div>
               <p className="field-help">
-                Public mode covers private senders and no-contract services. Contract mode currently calculates published PostNord list rates.
+                Public mode covers private senders and no-contract services. Business mode currently calculates published PostNord list rates.
               </p>
             </div>
 
@@ -207,9 +242,31 @@ export default function Calculator() {
                 </button>
               </div>
               <p className="field-help">
-                We only ask for location detail that changes a modeled tariff. No GPS, street address or precise destination is stored.
+                We only ask for location detail that changes a modeled tariff. No GPS or street address is needed. In Business mode, an optional destination postcode can improve PostNord surcharge accuracy.
               </p>
             </div>
+
+            {form.audience === "business" && form.route === "mainland" && (
+              <label className="field-group">
+                <span>Destination postal code · optional</span>
+                <input
+                  data-test-id="destinationPostalCode"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={5}
+                  placeholder="e.g. 00100"
+                  value={form.destinationPostalCode}
+                  onChange={(e) => update("destinationPostalCode", e.target.value)}
+                  aria-invalid={Boolean(errors.destinationPostalCode)}
+                />
+                {errors.destinationPostalCode && (
+                  <small className="field-error">{errors.destinationPostalCode}</small>
+                )}
+                <small className="field-help">
+                  Only used to detect PostNord's €11.63 island/ferry surcharge. No street address or GPS needed.
+                </small>
+              </label>
+            )}
 
             <div className="preset-block">
               <div className="preset-heading">

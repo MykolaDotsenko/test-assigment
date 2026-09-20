@@ -26,11 +26,13 @@ Pakettitutka therefore models each carrier separately and exposes an **accuracy 
 - branded, responsive comparison flow designed for desktop and mobile;
 - transparent pricing confidence instead of a misleading single “estimate”;
 - official tariff links embedded directly in results and carrier cards;
-- separate public/no-contract and business-contract pricing modes;
-- no GPS, street address, exact destination or account required for the modeled tariffs;
+- separate public/no-contract and published business list-rate modes;
+- no GPS or street address required; an optional business destination postcode is used only to detect PostNord's location-specific island/ferry surcharge;
 - mainland-vs-Åland route selection asks only for location detail that changes a price;
 - accessible controls, focus states and reduced-motion support;
-- Finland-first visual system with a dedicated Pakettitutka asset library.
+- Finland-first visual system with a dedicated Pakettitutka asset library;
+- branded web manifest/home-screen metadata and social preview;
+- no service-worker tariff caching: freshness takes priority over offline behavior.
 
 Brand assets live under `public/brand/` and are split into `logos/`, `visuals/`, and `mockups/`.
 
@@ -49,7 +51,7 @@ Official online/OmaPosti domestic prices from 2 June 2026:
 | XL | 40 × 60 × 100 cm | €22.90 |
 | XXL | longest side ≤ 200 cm, length + circumference ≤ 300 cm | €44.90 |
 
-Maximum weight for S–XXL is 25 kg. Pakettitutka applies Posti's separate Åland tariff when the user selects a mainland ↔ Åland route; no exact postal code is required.
+Minimum weight is 100 g. XXS minimum size is 1 × 15 × 15 cm; regular parcels use a 1 × 15 × 25 cm minimum. Maximum weight for S–XXL is 25 kg. Pakettitutka applies Posti's separate Åland tariff when the user selects a mainland ↔ Åland route; no exact postal code is required.
 
 Source: https://www.posti.fi/en/sending/parcels/package-price-lists
 
@@ -119,15 +121,22 @@ Pakettitutka also lists major operators that cannot be honestly reduced to one s
 
 The UI links directly to official carrier sources.
 
+## Tariff maintenance
+
+Mutable carrier data is centralized in `src/data/finlandTariffData.ts`: published price bands, source URLs, snapshot date, fuel/VAT constants and PostNord island/ferry postcodes live there. Carrier eligibility, chargeable-weight math and quote composition remain in `src/domain/finlandTariffs.ts`.
+
+This separation keeps routine tariff refreshes reviewable and reduces the chance of changing pricing algorithms while updating source data.
+
 ## Engineering rules
 
-- fixed-size boxes are rotation-aware;
+- fixed-size boxes are rotation-aware and enforce provider minimum as well as maximum dimensions;
 - girth-based services use longest side + circumference;
 - the UI asks only for mainland-vs-Åland routing because exact postcodes do not change the currently automated tariff formulas;
 - Åland is treated separately where the official tariff differs;
 - no price is invented when an official current tariff is unavailable;
-- public/no-contract and business-contract prices are never silently mixed;
+- public/no-contract and published business list-rate prices are never silently mixed;
 - PostNord fuel surcharge is applied to freight only, excluding additional-service fees;
+- PostNord's €11.63 island/ferry surcharge is applied for official Finnish surcharge postcodes when an optional destination postcode is supplied;
 - final carrier checkout/invoice remains authoritative;
 - unsupported dynamic/account pricing is explained explicitly instead of being approximated.
 
@@ -143,7 +152,7 @@ The UI links directly to official carrier sources.
 - GitHub Actions
 - Vercel
 
-Runtime dependencies remain React + React DOM only.
+Runtime dependencies remain React + React DOM only. CI also audits production dependencies at high severity, runs lint/typecheck/unit/build, and exercises desktop, Pixel 7 and 320 px narrow-mobile Playwright + axe accessibility checks.
 
 ## Run locally
 

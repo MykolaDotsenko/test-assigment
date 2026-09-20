@@ -7,7 +7,8 @@ Pakettitutka is a carrier-specific tariff engine. It intentionally does not shar
 ```text
 shipment inputs
   ├─ route scope: mainland or Åland
-  ├─ pricing mode: public/no-contract or business contract
+  ├─ pricing mode: public/no-contract or published business list rate
+  ├─ optional business destination postcode for PostNord island/ferry surcharge
   ├─ actual weight
   └─ dimensions
         ↓
@@ -21,6 +22,24 @@ sort by calculable price
         ↓
 render confidence + official source
 ```
+
+## Data boundary
+
+```text
+src/data/finlandTariffData.ts
+  ├─ official tariff bands
+  ├─ effective / snapshot constants
+  ├─ carrier source URLs
+  └─ PostNord island/ferry postcode set
+            ↓
+src/domain/finlandTariffs.ts
+  ├─ eligibility rules
+  ├─ dimensional / volumetric calculations
+  ├─ surcharge composition
+  └─ normalized Quote[]
+```
+
+Tariff refreshes should normally modify the data module first. Domain logic changes require separate tests because they change how published rules are interpreted.
 
 ## Accuracy model
 
@@ -37,7 +56,7 @@ This is a core domain distinction, not just a UI badge.
 
 ### Posti
 
-Rotation-aware size matching selects the smallest eligible XXS–XL product. XXL uses the official longest-side and length-plus-girth constraint. Selecting the Åland route switches to the separate Posti Åland price table without collecting an exact postal code.
+Rotation-aware size matching selects the smallest eligible XXS–XL product and enforces Posti's 100 g minimum plus distinct XXS vs regular-parcel minimum dimensions. XXL uses the official longest-side and length-plus-girth constraint. Selecting the Åland route switches to the separate Posti Åland price table without collecting an exact postal code.
 
 ### Matkahuolto
 
@@ -60,7 +79,7 @@ max(actual, volumetric)
 → Finnish VAT
 ```
 
-Only nationwide domestic Locker and Service Point products are auto-calculated. Pakettitutka does not guess PostNord Home zone/rural/island pricing without the full official postal-code surcharge model.
+Only nationwide domestic Locker and Service Point products are auto-calculated. An optional destination postcode is checked against PostNord's official Finnish island/ferry surcharge list; matching postcodes add the published €11.63 fee before VAT. Pakettitutka does not guess PostNord Home zone/rural/island pricing without the full official postal-code surcharge model.
 
 ## Data freshness
 
@@ -72,10 +91,12 @@ Unit tests cover:
 - route scope and Åland pricing;
 - decimal input;
 - rotation-aware box matching;
+- Posti minimum weight/dimension boundaries for XXS and regular parcels;
 - Posti Åland tariff;
 - GLS mandatory home delivery;
 - PostNord volumetric weight;
 - PostNord fuel + VAT pipeline;
+- PostNord island/ferry postcode surcharge detection;
 - exclusion of additional-service fees from the fuel-surcharge base.
 
 Browser tests cover:

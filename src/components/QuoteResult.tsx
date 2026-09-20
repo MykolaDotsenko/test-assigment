@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { formatPrice, type ParcelInput, type Quote } from "../domain/finlandTariffs";
 
 function badge(accuracy: Quote["accuracy"]) {
@@ -8,13 +9,24 @@ function badge(accuracy: Quote["accuracy"]) {
 }
 
 export default function QuoteResult({ input, quotes }: { input: ParcelInput; quotes: Quote[] }) {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    sectionRef.current?.focus();
+  }, []);
+
   const secondPrice = quotes[1]?.priceCents ?? null;
   const bestPrice = quotes[0]?.priceCents ?? null;
   const savingsCents =
     bestPrice !== null && secondPrice !== null && secondPrice > bestPrice
       ? secondPrice - bestPrice
       : null;
-  const routeLabel = input.route === "aland" ? "Mainland Finland ↔ Åland" : "Mainland Finland";
+  const routeLabel =
+    input.route === "aland"
+      ? "Mainland Finland ↔ Åland"
+      : input.destinationPostalCode
+        ? `Mainland Finland · destination ${input.destinationPostalCode}`
+        : "Mainland Finland";
   const coverage =
     input.audience === "business" && input.route === "aland"
       ? {
@@ -37,7 +49,14 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
           };
 
   return (
-    <section className="results-section" data-test-id="results" aria-live="polite" aria-labelledby="results-title">
+    <section
+      ref={sectionRef}
+      className="results-section"
+      data-test-id="results"
+      aria-live="polite"
+      aria-labelledby="results-title"
+      tabIndex={-1}
+    >
       <div className="results-heading">
         <div>
           <span className="eyebrow">Comparison</span>
@@ -46,7 +65,7 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
         </div>
         {quotes[0]?.priceCents !== null && quotes[0] && (
           <div className="best-price">
-            <small>Lowest calculated</small>
+            <small>Lowest calculated here</small>
             <strong data-test-id="bestPrice">{formatPrice(quotes[0].priceCents)}</strong>
             <span>{quotes[0].provider}</span>
             {savingsCents !== null && <small className="savings-note">{formatPrice(savingsCents)} below the next calculated option</small>}
@@ -62,7 +81,10 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
       {quotes.length === 0 ? (
         <div className="empty-result">
           <strong>No tariff-backed option fits these inputs.</strong>
-          <span>Check the provider directory below for live-quote carriers or reduce parcel dimensions/weight.</span>
+          <span>This shipment may need a larger-parcel, freight or route-specific quote.</span>
+          <a className="empty-result-link" href="#providers">
+            Browse live-quote carriers <span aria-hidden="true">↓</span>
+          </a>
         </div>
       ) : (
         <div className="quote-list">
@@ -73,7 +95,10 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
                   <span className="provider-name">{quote.provider}</span>
                   <h3>{quote.service}</h3>
                 </div>
-                <strong className="quote-price">{formatPrice(quote.priceCents)}</strong>
+                <div className="quote-price-stack">
+                  <strong className="quote-price">{formatPrice(quote.priceCents)}</strong>
+                  {index === 0 && <span className="best-label">Lowest calculated here</span>}
+                </div>
               </div>
               <div className="quote-badges">
                 <span className={`accuracy accuracy--${quote.accuracy}`}>{badge(quote.accuracy)}</span>
@@ -81,6 +106,15 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
                 <span>{quote.deliveryTime}</span>
               </div>
               <p>{quote.explanation}</p>
+              <a
+                className={index === 0 ? "quote-cta quote-cta--primary" : "quote-cta"}
+                href={quote.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Verify ${quote.provider} pricing on the official source`}
+              >
+                Verify official pricing <span aria-hidden="true">↗</span>
+              </a>
               <details>
                 <summary>Calculation details</summary>
                 <ul>{quote.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>

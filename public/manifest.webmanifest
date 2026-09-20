@@ -1,0 +1,22 @@
+{
+  "name": "Pakettitutka — Finnish Parcel Price Intelligence",
+  "short_name": "Pakettitutka",
+  "description": "Compare Finnish parcel and courier tariffs using transparent carrier-specific pricing rules.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f2",
+  "theme_color": "#f7f8f3",
+  "lang": "en-FI",
+  "categories": [
+    "utilities",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "/brand/logos/app-icon-v1.webp",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}
