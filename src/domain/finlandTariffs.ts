@@ -526,7 +526,10 @@ export function formatPrice(cents: number | null): string {
 }
 
 export function parsePositiveNumber(raw: string): number | null {
-  const value = Number(raw.trim().replace(",", "."));
+  const normalized = raw.trim().replace(",", ".");
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return null;
+
+  const value = Number(normalized);
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 

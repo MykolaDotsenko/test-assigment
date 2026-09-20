@@ -23,6 +23,15 @@ const base: ParcelInput = {
 describe("input parsing", () => {
   it("accepts decimal commas for parcel measurements", () => {
     expect(parsePositiveNumber("1,25")).toBe(1.25);
+    expect(parsePositiveNumber("1.25")).toBe(1.25);
+  });
+
+  it("rejects technical or ambiguous numeric formats", () => {
+    expect(parsePositiveNumber("1e3")).toBeNull();
+    expect(parsePositiveNumber("Infinity")).toBeNull();
+    expect(parsePositiveNumber(".5")).toBeNull();
+    expect(parsePositiveNumber("1,2,3")).toBeNull();
+    expect(parsePositiveNumber("-1")).toBeNull();
   });
 });
 
