@@ -29,7 +29,7 @@ test("business mode exposes PostNord list-rate calculations", async ({ page }) =
   await expect(results.getByText("Published list calculation").first()).toBeVisible();
   await expect(results.getByText("Matkahuolto")).toHaveCount(0);
   await expect(results.getByText("GLS Finland")).toHaveCount(0);
-  await results.getByText("Calculation details").first().click();
+  await results.getByText("Why this price?").first().click();
   await expect(results.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
 });
 
@@ -56,7 +56,7 @@ test("supports Åland route without asking for a postcode or GPS", async ({ page
 
   const results = page.locator('[data-test-id="results"]');
   await expect(results.getByText("Mainland Finland ↔ Åland")).toBeVisible();
-  await results.getByText("Calculation details").first().click();
+  await results.getByText("Why this price?").first().click();
   await expect(results.getByText("Åland tariff applied")).toBeVisible();
 });
 
@@ -133,7 +133,7 @@ test("applies PostNord island and ferry surcharge from an optional destination p
   await page.locator('[data-test-id="comparePrices"]').click();
 
   const results = page.locator('[data-test-id="results"]');
-  await results.getByText("Calculation details").first().click();
+  await results.getByText("Why this price?").first().click();
   await expect(results.getByText("Island/ferry surcharge: +€11.63 excl. VAT").first()).toBeVisible();
   await expect(results).toContainText("destination 00190");
 });
