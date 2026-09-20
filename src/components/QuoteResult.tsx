@@ -1,6 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { formatPrice, type ParcelInput, type Quote } from "../domain/finlandTariffs";
-import { COPY, localizeTechnicalText, type Lang } from "../i18n";
+import { COPY, type Lang } from "../i18n";
+import {
+  localizeQuoteDetail,
+  quoteEffectiveDateLabel,
+  quoteEtaLabel,
+  quoteExplanationLabel,
+  quoteServiceLabel,
+  quoteSourceLabel,
+} from "../quotePresentation";
+import { copyTextWithFallback } from "../utils/copyText";
+
+type CopyState = {
+  id: string;
+  status: "success" | "error";
+} | null;
 
 function badge(accuracy: Quote["accuracy"], lang: Lang) {
   const c = COPY[lang].results;
@@ -63,19 +77,25 @@ function coverageCopy(input: ParcelInput, lang: Lang) {
 function shipmentSummary(input: ParcelInput, quote: Quote, lang: Lang): string {
   const route =
     input.route === "aland"
-      ? lang === "fi" ? "Manner-Suomi ↔ Ahvenanmaa" : "Mainland Finland ↔ Åland"
-      : lang === "fi" ? "Manner-Suomi" : "Mainland Finland";
+      ? lang === "fi"
+        ? "Manner-Suomi ↔ Ahvenanmaa"
+        : "Mainland Finland ↔ Åland"
+      : lang === "fi"
+        ? "Manner-Suomi"
+        : "Mainland Finland";
 
   return [
     "Pakettitutka",
-    `${quote.provider} — ${quote.service}`,
-    `${formatPrice(quote.priceCents)} · ${quote.deliveryTime}`,
+    `${quote.provider} — ${quoteServiceLabel(quote, lang)}`,
+    `${formatPrice(quote.priceCents)} · ${quoteEtaLabel(quote, lang)}`,
     `${input.weightKg} kg · ${input.lengthCm} × ${input.widthCm} × ${input.heightCm} cm`,
     route,
     input.destinationPostalCode
       ? `${lang === "fi" ? "Kohteen postinumero" : "Destination postcode"}: ${input.destinationPostalCode}`
       : null,
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export default function QuoteResult({
@@ -88,7 +108,7 @@ export default function QuoteResult({
   lang: Lang;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<CopyState>(null);
   const c = COPY[lang].results;
 
   useEffect(() => {
@@ -96,9 +116,17 @@ export default function QuoteResult({
   }, []);
 
   const copyQuote = async (quote: Quote) => {
-    await navigator.clipboard.writeText(shipmentSummary(input, quote, lang));
-    setCopiedId(quote.id);
-    window.setTimeout(() => setCopiedId((current) => current === quote.id ? null : current), 1800);
+    const text = shipmentSummary(input, quote, lang);
+    const copied = await copyTextWithFallback(text);
+
+    setCopyState({ id: quote.id, status: copied ? "success" : "error" });
+
+    if (copied) {
+      window.setTimeout(
+        () => setCopyState((current) => (current?.id === quote.id ? null : current)),
+        1800,
+      );
+    }
   };
 
   const secondPrice = quotes[1]?.priceCents ?? null;
@@ -107,12 +135,14 @@ export default function QuoteResult({
     bestPrice !== null && secondPrice !== null && secondPrice > bestPrice
       ? secondPrice - bestPrice
       : null;
+
   const routeLabel =
     input.route === "aland"
       ? c.aland
       : input.destinationPostalCode
         ? `${c.mainland} · ${c.destination} ${input.destinationPostalCode}`
         : c.mainland;
+
   const coverage = coverageCopy(input, lang);
 
   return (
@@ -130,8 +160,11 @@ export default function QuoteResult({
           <h2 id="results-title">
             {quotes.length} {quotes.length === 1 ? c.option : c.options}
           </h2>
-          <p>{input.weightKg} kg · {input.lengthCm} × {input.widthCm} × {input.heightCm} cm · {routeLabel}</p>
+          <p>
+            {input.weightKg} kg · {input.lengthCm} × {input.widthCm} × {input.heightCm} cm · {routeLabel}
+          </p>
         </div>
+
         {quotes[0]?.priceCents !== null && quotes[0] && (
           <div className="best-price">
             <small>{c.lowest}</small>
@@ -162,63 +195,98 @@ export default function QuoteResult({
           </div>
 
           <div className="quote-list">
-            {quotes.map((item, index) => (
-              <article className={index === 0 ? "quote-card quote-card--best" : "quote-card"} key={item.id}>
-                <div className="quote-topline">
-                  <div>
-                    <span className="provider-name">{item.provider}</span>
-                    <h3>{item.service}</h3>
+            {quotes.map((item, index) => {
+              const summary = shipmentSummary(input, item, lang);
+              const currentCopyState = copyState?.id === item.id ? copyState.status : null;
+
+              return (
+                <article
+                  className={index === 0 ? "quote-card quote-card--best" : "quote-card"}
+                  key={item.id}
+                >
+                  <div className="quote-topline">
+                    <div>
+                      <span className="provider-name">{item.provider}</span>
+                      <h3>{quoteServiceLabel(item, lang)}</h3>
+                    </div>
+                    <div className="quote-price-stack">
+                      <strong className="quote-price">{formatPrice(item.priceCents)}</strong>
+                      {index === 0 && <span className="best-label">{c.lowest}</span>}
+                    </div>
                   </div>
-                  <div className="quote-price-stack">
-                    <strong className="quote-price">{formatPrice(item.priceCents)}</strong>
-                    {index === 0 && <span className="best-label">{c.lowest}</span>}
+
+                  <div className="quote-badges">
+                    <span className={`accuracy accuracy--${item.accuracy}`}>
+                      {badge(item.accuracy, lang)}
+                    </span>
+                    <span className="quote-audience">
+                      {item.audience === "consumer" ? c.public : c.business}
+                    </span>
+                    <span>{quoteEtaLabel(item, lang)}</span>
                   </div>
-                </div>
 
-                <div className="quote-badges">
-                  <span className={`accuracy accuracy--${item.accuracy}`}>{badge(item.accuracy, lang)}</span>
-                  <span>{item.audience === "consumer" ? c.public : c.business}</span>
-                  <span>{item.deliveryTime}</span>
-                </div>
+                  <div className="quote-actions">
+                    <a
+                      className={index === 0 ? "quote-cta quote-cta--primary" : "quote-cta"}
+                      href={item.actionUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`${c.verify}: ${item.provider}`}
+                    >
+                      {c.verify} <span aria-hidden="true">↗</span>
+                    </a>
 
-                <div className="quote-actions">
-                  <a
-                    className={index === 0 ? "quote-cta quote-cta--primary" : "quote-cta"}
-                    href={item.actionUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`${c.verify}: ${item.provider}`}
-                  >
-                    {c.verify} <span aria-hidden="true">↗</span>
-                  </a>
-                  <button
-                    type="button"
-                    className="quote-copy"
-                    onClick={() => void copyQuote(item)}
-                    aria-live="polite"
-                  >
-                    {copiedId === item.id ? c.copied : c.copy}
-                  </button>
-                </div>
-
-                {item.actionRequiresAccount && <small className="handoff-account">{c.accountRequired}</small>}
-
-                <details className="quote-more">
-                  <summary>{c.why}</summary>
-                  <p>{lang === "fi" ? localizeTechnicalText(item.explanation, lang) : item.explanation}</p>
-                  <h4>{c.technical}</h4>
-                  <ul>
-                    {item.details.map((detail) => (
-                      <li key={detail}>{localizeTechnicalText(detail, lang)}</li>
-                    ))}
-                  </ul>
-                  <div className="source-row">
-                    <span>{c.checked}: {item.effectiveDate}</span>
-                    <a href={item.sourceUrl} target="_blank" rel="noreferrer">{item.sourceLabel} ↗</a>
+                    <button
+                      type="button"
+                      className="quote-copy"
+                      onClick={() => void copyQuote(item)}
+                      aria-live="polite"
+                    >
+                      {currentCopyState === "success"
+                        ? c.copied
+                        : currentCopyState === "error"
+                          ? c.copyFailed
+                          : c.copy}
+                    </button>
                   </div>
-                </details>
-              </article>
-            ))}
+
+                  {currentCopyState === "error" && (
+                    <div className="copy-fallback">
+                      <label htmlFor={`manual-copy-${item.id}`}>{c.manualCopy}</label>
+                      <textarea
+                        id={`manual-copy-${item.id}`}
+                        readOnly
+                        value={summary}
+                        onFocus={(event) => event.currentTarget.select()}
+                      />
+                    </div>
+                  )}
+
+                  {item.actionRequiresAccount && (
+                    <small className="handoff-account">{c.accountRequired}</small>
+                  )}
+
+                  <details className="quote-more">
+                    <summary>{c.why}</summary>
+                    <p>{quoteExplanationLabel(item, lang)}</p>
+                    <h4>{c.technical}</h4>
+                    <ul>
+                      {item.details.map((detail) => (
+                        <li key={detail}>{localizeQuoteDetail(detail, lang)}</li>
+                      ))}
+                    </ul>
+                    <div className="source-row">
+                      <span>
+                        {c.checked}: {quoteEffectiveDateLabel(item, lang)}
+                      </span>
+                      <a href={item.sourceUrl} target="_blank" rel="noreferrer">
+                        {quoteSourceLabel(item, lang)} ↗
+                      </a>
+                    </div>
+                  </details>
+                </article>
+              );
+            })}
           </div>
         </>
       )}

@@ -1596,3 +1596,47 @@
     width: 100%;
   }
 }
+
+
+/* P0 mobile UX hardening */
+.language-option {
+  min-height: 44px;
+}
+
+.copy-fallback {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.copy-fallback label {
+  color: var(--danger);
+  font-size: .72rem;
+  font-weight: 780;
+}
+
+.copy-fallback textarea {
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid rgba(164,56,43,.25);
+  border-radius: 12px;
+  background: #fffaf8;
+  color: var(--ink);
+  font: inherit;
+  font-size: .74rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .quote-badges .quote-audience {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) and (max-height: 600px) {
+  .primary-button {
+    position: static;
+  }
+}

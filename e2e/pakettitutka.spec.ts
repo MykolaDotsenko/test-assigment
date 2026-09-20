@@ -242,8 +242,19 @@ test("shows calculated carriers first instead of the full directory", async ({ p
 });
 
 
-test("hands a calculated quote off to the carrier without losing shipment context", async ({ page, context }) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+test("hands a calculated quote off to the carrier without losing shipment context", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: (value: string) => {
+          (window as typeof window & { __copiedText?: string }).__copiedText = value;
+          return Promise.resolve();
+        },
+      },
+    });
+  });
+  await page.reload();
   await page.locator('[data-test-id="comparePrices"]').click();
 
   const results = page.locator('[data-test-id="results"]');
@@ -251,10 +262,12 @@ test("hands a calculated quote off to the carrier without losing shipment contex
   await copy.click();
 
   await expect(copy).toHaveText("Copied");
-  const clipboard = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboard).toContain("Matkahuolto");
-  expect(clipboard).toContain("1 kg");
-  expect(clipboard).toContain("25 × 15 × 5 cm");
+  const copied = await page.evaluate(
+    () => (window as typeof window & { __copiedText?: string }).__copiedText ?? "",
+  );
+  expect(copied).toContain("Matkahuolto");
+  expect(copied).toContain("1 kg");
+  expect(copied).toContain("25 × 15 × 5 cm");
 });
 
 test("uses transaction destinations instead of tariff pages for calculated carriers", async ({ page }) => {
@@ -267,4 +280,64 @@ test("uses transaction destinations instead of tariff pages for calculated carri
     .toHaveAttribute("href", "https://www.posti.fi/palvelutverkossa/lahettaminen/uusi/?lang=en");
   await expect(results.getByRole("link", { name: /Continue with carrier: GLS Finland/ }))
     .toHaveAttribute("href", "https://glspaketti.fi/");
+});
+
+
+test("offers a manual copy fallback when clipboard APIs fail", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: () => Promise.reject(new Error("blocked")),
+      },
+    });
+    Object.defineProperty(document, "execCommand", {
+      configurable: true,
+      value: () => false,
+    });
+  });
+  await page.reload();
+  await page.locator('[data-test-id="comparePrices"]').click();
+
+  const results = page.locator('[data-test-id="results"]');
+  const copy = results.getByRole("button", { name: "Copy shipment details" }).first();
+  await copy.click();
+
+  await expect(copy).toHaveText("Copy unavailable — select the details below");
+  const fallback = results.locator(".copy-fallback textarea").first();
+  await expect(fallback).toBeVisible();
+  await expect(fallback).toHaveValue(/Matkahuolto/);
+  await expect(fallback).toHaveValue(/25 × 15 × 5 cm/);
+});
+
+test("renders quote service and ETA fully in Finnish", async ({ page }) => {
+  await page.getByRole("button", { name: "FI", exact: true }).click();
+  await page.locator('[data-test-id="comparePrices"]').click();
+
+  const results = page.locator('[data-test-id="results"]');
+  await expect(results.getByRole("heading", { name: /S-paketti/ }).first()).toBeVisible();
+  await expect(results.getByText("1–3 arkipäivää").first()).toBeVisible();
+  await expect(results.getByText(/business days/)).toHaveCount(0);
+});
+
+test("disables sticky compare behavior in keyboard-sized mobile viewports", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 500 });
+  const heightInput = page.locator('[data-test-id="heightCm"]');
+  await heightInput.focus();
+
+  const position = await page.locator('[data-test-id="comparePrices"]').evaluate(
+    (element) => getComputedStyle(element).position,
+  );
+  expect(position).toBe("static");
+});
+
+test("selects existing measurement values on focus for faster replacement", async ({ page }) => {
+  const input = page.locator('[data-test-id="lengthCm"]');
+  await input.focus();
+
+  const selected = await input.evaluate((element) => {
+    const control = element as HTMLInputElement;
+    return control.selectionStart === 0 && control.selectionEnd === control.value.length;
+  });
+  expect(selected).toBe(true);
 });
