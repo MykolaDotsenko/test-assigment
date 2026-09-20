@@ -152,7 +152,7 @@ This separation keeps routine tariff refreshes reviewable and reduces the chance
 - GitHub Actions
 - Vercel
 
-Runtime dependencies remain React + React DOM only. CI also audits production dependencies at high severity, runs lint/typecheck/unit/build, and exercises desktop/mobile Playwright + axe accessibility checks.
+Runtime dependencies remain React + React DOM only. CI also audits production dependencies at high severity, runs lint/typecheck/unit/build, and exercises desktop, Pixel 7 and 320 px narrow-mobile Playwright + axe accessibility checks.
 
 ## Run locally
 

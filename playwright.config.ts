@@ -26,5 +26,12 @@ export default defineConfig({
       name: "mobile-chromium",
       use: { ...devices["Pixel 7"] },
     },
+    {
+      name: "narrow-mobile-chromium",
+      use: {
+        ...devices["Pixel 7"],
+        viewport: { width: 320, height: 700 },
+      },
+    },
   ],
 });
