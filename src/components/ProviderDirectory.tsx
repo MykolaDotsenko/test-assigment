@@ -1,4 +1,7 @@
-import { PROVIDER_DIRECTORY } from "../domain/finlandTariffs";
+import {
+  PROVIDER_DIRECTORY,
+  TARIFF_SNAPSHOT_DATE,
+} from "../domain/finlandTariffs";
 
 const statusLabel = {
   calculated: "Calculated in Pakettitutka",
@@ -6,16 +9,48 @@ const statusLabel = {
   inactive: "Not currently available from Finland",
 } as const;
 
+const DAY_MS = 86_400_000;
+const STALE_AFTER_DAYS = 31;
+const SNAPSHOT_AGE_DAYS = Math.max(
+  0,
+  Math.floor((Date.now() - Date.parse(`${TARIFF_SNAPSHOT_DATE}T00:00:00Z`)) / DAY_MS),
+);
+const SNAPSHOT_IS_STALE = SNAPSHOT_AGE_DAYS > STALE_AFTER_DAYS;
+
+function sourceAction(status: (typeof PROVIDER_DIRECTORY)[number]["status"]) {
+  if (status === "live-quote") return "Official service / pricing ↗";
+  if (status === "inactive") return "Official service status ↗";
+  return "Official tariff source ↗";
+}
+
 export default function ProviderDirectory() {
+  const calculatedCount = PROVIDER_DIRECTORY.filter((entry) => entry.status === "calculated").length;
+  const liveQuoteCount = PROVIDER_DIRECTORY.filter((entry) => entry.status === "live-quote").length;
   return (
     <section className="directory-section" id="providers" aria-labelledby="directory-title">
       <div className="directory-heading">
         <div>
           <span className="eyebrow">Finnish carrier directory</span>
-          <h2 id="directory-title">Major parcel & courier operators serving Finland</h2>
+          <h2 id="directory-title">Parcel, express, last-mile & freight operators serving Finland</h2>
         </div>
-        <p>“All” is treated as major nationwide and international parcel/courier operators, not every local same-day courier company.</p>
+        <p>Coverage focuses on established nationwide, international, last-mile and time-critical operators with verifiable Finnish service. Small local courier firms are not represented as a complete national market list.</p>
       </div>
+
+      <div className="directory-metrics" aria-label="Carrier coverage summary">
+        <span><strong>{PROVIDER_DIRECTORY.length}</strong> verified operators</span>
+        <span><strong>{calculatedCount}</strong> tariff-calculated</span>
+        <span><strong>{liveQuoteCount}</strong> live/account quote</span>
+        <span>Reviewed <strong>{TARIFF_SNAPSHOT_DATE}</strong></span>
+      </div>
+
+      {SNAPSHOT_IS_STALE && (
+        <div className="freshness-warning" role="status">
+          <strong>Tariff review due.</strong>
+          <span>
+            This snapshot is {SNAPSHOT_AGE_DAYS} days old. Treat calculated prices as a comparison aid and verify the linked official source before buying.
+          </span>
+        </div>
+      )}
 
       <div className="directory-grid">
         {PROVIDER_DIRECTORY.map((entry) => (
@@ -28,7 +63,15 @@ export default function ProviderDirectory() {
             <p>{entry.tariffSummary}</p>
             <div className="source-row">
               <span>{entry.freshness}</span>
-              <a href={entry.sourceUrl} target="_blank" rel="noreferrer">{entry.sourceLabel} ↗</a>
+              <a
+                href={entry.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`${entry.provider}: ${entry.sourceLabel}`}
+                title={entry.sourceLabel}
+              >
+                {sourceAction(entry.status)}
+              </a>
             </div>
           </article>
         ))}

@@ -14,16 +14,16 @@ test("compares consumer tariffs and ranks the cheapest calculable option", async
 
   await expect(page.getByText("Matkahuolto").first()).toBeVisible();
   await expect(page.locator('[data-test-id="bestPrice"]')).toContainText("8,80");
-  await expect(page.getByText("Exact public tariff").first()).toBeVisible();
+  await expect(page.getByText("Published public tariff").first()).toBeVisible();
 });
 
 test("business mode exposes PostNord list-rate calculations", async ({ page }) => {
-  await page.getByRole("button", { name: "Business contract rates" }).click();
+  await page.getByRole("button", { name: "Business list rates" }).click();
   await page.locator('[data-test-id="comparePrices"]').click();
 
   const results = page.locator('[data-test-id="results"]');
   await expect(results.getByText("PostNord").first()).toBeVisible();
-  await expect(results.getByText("Contract list calculation").first()).toBeVisible();
+  await expect(results.getByText("Published list calculation").first()).toBeVisible();
   await expect(results.getByText("Matkahuolto")).toHaveCount(0);
   await expect(results.getByText("GLS Finland")).toHaveCount(0);
   await results.getByText("Calculation details").first().click();

@@ -176,7 +176,7 @@ export default function Calculator() {
                   onClick={() => update("audience", "business")}
                   aria-pressed={form.audience === "business"}
                 >
-                  Business contract rates
+                  Business list rates
                 </button>
               </div>
               <p className="field-help">
@@ -250,20 +250,22 @@ export default function Calculator() {
             </div>
             <p className="field-help field-help--compact">Measure the package from the outside. Pakettitutka automatically tests allowed box rotations.</p>
 
-            <details className="provider-options">
-              <summary>
-                <span>GLS options</span>
-                <small>Only affect the public GLSparcel.fi quote</small>
-              </summary>
-              <label className="check-row">
-                <input type="checkbox" checked={form.glsPickup} onChange={(e) => update("glsPickup", e.target.checked)} />
-                <span><strong>Pickup from sender</strong><small>Official +€20 per shipment</small></span>
-              </label>
-              <label className="check-row">
-                <input type="checkbox" checked={form.glsHomeDelivery} onChange={(e) => update("glsHomeDelivery", e.target.checked)} />
-                <span><strong>Deliver to recipient’s door</strong><small>Official +€5 per parcel; mandatory above 15 kg</small></span>
-              </label>
-            </details>
+            {form.audience === "consumer" && form.route === "mainland" && (
+              <details className="provider-options">
+                <summary>
+                  <span>GLS options</span>
+                  <small>Only affect the public GLSparcel.fi quote</small>
+                </summary>
+                <label className="check-row">
+                  <input type="checkbox" checked={form.glsPickup} onChange={(e) => update("glsPickup", e.target.checked)} />
+                  <span><strong>Pickup from sender</strong><small>Official +€20 per shipment</small></span>
+                </label>
+                <label className="check-row">
+                  <input type="checkbox" checked={form.glsHomeDelivery} onChange={(e) => update("glsHomeDelivery", e.target.checked)} />
+                  <span><strong>Deliver to recipient’s door</strong><small>Official +€5 per parcel; mandatory above 15 kg</small></span>
+                </label>
+              </details>
+            )}
 
             <button data-test-id="comparePrices" className="primary-button" type="submit">
               <span>Compare verified prices</span><span aria-hidden="true">→</span>

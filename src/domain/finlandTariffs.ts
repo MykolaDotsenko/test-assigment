@@ -54,17 +54,31 @@ const DHL_URL = "https://www.dhl.com/fi-en/home/express.html";
 const DSV_URL =
   "https://www.dsv.com/fi-fi/palvelumme/kuljetusmuodot/maantiekuljetukset/rahtilisat/polttoainelisat";
 const BRING_URL = "https://www.bring.fi/";
+const BUDBEE_URL = "https://www.instabee.com/";
+const KAUKOKIITO_URL = "https://www.kaukokiito.fi/en/";
+const JETPAK_URL = "https://jetpak.com/fi/";
+const DHL_FREIGHT_URL =
+  "https://www.dhl.com/fi-en/home/freight/help-center-for-european-road-and-rail/dhl-freight-surcharges.html";
 
 interface BoxTariff {
   name: string;
   max: [number, number, number];
   maxWeightKg: number;
+  min?: [number, number, number];
+  minWeightKg?: number;
   priceCents: number;
   alandPriceCents?: number;
 }
 
 const POSTI_BOXES: BoxTariff[] = [
-  { name: "XXS", max: [3, 25, 35], maxWeightKg: 2, priceCents: 790 },
+  {
+    name: "XXS",
+    max: [3, 25, 35],
+    maxWeightKg: 2,
+    min: [1, 15, 15],
+    minWeightKg: 0.1,
+    priceCents: 790,
+  },
   { name: "S", max: [11, 32, 42], maxWeightKg: 25, priceCents: 990, alandPriceCents: 1490 },
   { name: "M", max: [19, 36, 60], maxWeightKg: 25, priceCents: 1190, alandPriceCents: 1690 },
   { name: "L", max: [36, 37, 60], maxWeightKg: 25, priceCents: 1690, alandPriceCents: 2090 },
@@ -118,9 +132,18 @@ function sortedDimensions(input: ParcelInput): [number, number, number] {
 
 function fitsRotatableBox(input: ParcelInput, box: BoxTariff): boolean {
   if (input.weightKg > box.maxWeightKg) return false;
+  if (box.minWeightKg !== undefined && input.weightKg < box.minWeightKg) return false;
+
   const parcel = sortedDimensions(input);
   const limits = [...box.max].sort((a, b) => a - b);
-  return parcel.every((dimension, index) => dimension <= limits[index]);
+  if (!parcel.every((dimension, index) => dimension <= limits[index])) return false;
+
+  if (box.min) {
+    const minimums = [...box.min].sort((a, b) => a - b);
+    if (!parcel.every((dimension, index) => dimension >= minimums[index])) return false;
+  }
+
+  return true;
 }
 
 function longestAndGirth(input: ParcelInput): { longest: number; lengthPlusGirth: number } {
@@ -149,7 +172,7 @@ function quotePosti(input: ParcelInput): Quote | null {
       audience: "consumer",
       priceCents,
       accuracy: "exact-public",
-      deliveryTime: "Domestic parcel service",
+      deliveryTime: "1–3 business days",
       explanation: aland
         ? "Official Posti online price to/from Åland for the smallest fitting parcel size."
         : "Official Posti online/OmaPosti domestic price for the smallest fitting parcel size.",
@@ -173,7 +196,7 @@ function quotePosti(input: ParcelInput): Quote | null {
       audience: "consumer",
       priceCents: aland ? 4890 : 4490,
       accuracy: "exact-public",
-      deliveryTime: "Domestic parcel service",
+      deliveryTime: "1–3 business days",
       explanation:
         "Official XXL price. Eligibility is checked using Posti's longest-side and length-plus-girth limits.",
       sourceLabel: "Posti parcel price list",
@@ -309,6 +332,11 @@ function quotePostNord(
 
   const { longest, lengthPlusGirth } = longestAndGirth(input);
   const sorted = sortedDimensions(input);
+  const minimumDimensions = [1.5, 10, 15];
+  const meetsMinimumDimensions = sorted.every(
+    (dimension, index) => dimension >= minimumDimensions[index],
+  );
+  if (!meetsMinimumDimensions) return null;
 
   const eligible =
     service === "locker"
@@ -341,7 +369,7 @@ function quotePostNord(
     audience: "business",
     priceCents: priced.totalCents,
     accuracy: "exact-list",
-    deliveryTime: "Contract parcel service",
+    deliveryTime: "1–2 business days",
     explanation:
       "Calculated from PostNord's 2026 list rate using chargeable weight, current September parcel fuel surcharge and Finnish VAT. Your negotiated contract rate may differ.",
     sourceLabel: "PostNord 2026 service price list",
@@ -454,6 +482,46 @@ export const PROVIDER_DIRECTORY: ProviderDirectoryEntry[] = [
     sourceUrl: DSV_URL,
     sourceLabel: "DSV Finland fuel surcharges",
     freshness: "16 Sep 2026",
+  },
+  {
+    provider: "Budbee / Instabee",
+    scope: "E-commerce home & locker last-mile",
+    audience: "business",
+    status: "live-quote",
+    tariffSummary: "Active Finnish e-commerce delivery network with home and locker delivery. Merchant pricing is commercial/account-specific rather than a universal public sender tariff.",
+    sourceUrl: BUDBEE_URL,
+    sourceLabel: "Instabee official service overview",
+    freshness: "Finland operation verified Sep 2026",
+  },
+  {
+    provider: "Kaukokiito",
+    scope: "Domestic freight & distribution",
+    audience: "business",
+    status: "live-quote",
+    tariffSummary: "Nationwide Finnish freight and distribution operator. Transport pricing and remote-area/service fees depend on shipment and customer agreement.",
+    sourceUrl: KAUKOKIITO_URL,
+    sourceLabel: "Kaukokiito official site",
+    freshness: "2026 pricing updates verified",
+  },
+  {
+    provider: "Jetpak Finland",
+    scope: "Time-critical courier & express",
+    audience: "both",
+    status: "live-quote",
+    tariffSummary: "Same-day, next-day and time-critical door-to-door services in Finland and internationally. Price and ETA are produced for the specific booking.",
+    sourceUrl: JETPAK_URL,
+    sourceLabel: "Jetpak Finland",
+    freshness: "Active Finland network verified 2026",
+  },
+  {
+    provider: "DHL Freight",
+    scope: "Domestic & European road freight",
+    audience: "business",
+    status: "live-quote",
+    tariffSummary: "Road-freight pricing is shipment-specific and uses changing surcharges; domestic road-freight fuel surcharge is published separately.",
+    sourceUrl: DHL_FREIGHT_URL,
+    sourceLabel: "DHL Freight Finland surcharges",
+    freshness: "Current Sep 2026 surcharge schedule",
   },
   {
     provider: "Bring",

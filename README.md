@@ -111,6 +111,10 @@ Pakettitutka also lists major operators that cannot be honestly reduced to one s
 - UPS — rate guide + fuel/remote/demand surcharges
 - DHL Express — live quote based on origin/destination, chargeable weight and service
 - DSV Parcel / Schenker — contract/spot pricing; domestic parcel fuel surcharge 16.86% from 16 Sep 2026
+- Budbee / Instabee — active Finnish e-commerce home/locker network; merchant pricing is account-specific
+- Kaukokiito — Finnish nationwide freight/distribution; quote/agreement pricing
+- Jetpak Finland — time-critical same-day/next-day courier; booking-specific quote
+- DHL Freight — domestic/European road freight with changing published surcharges
 - Bring — outbound shipments from Finland and domestic Finland services are discontinued
 
 The UI links directly to official carrier sources.

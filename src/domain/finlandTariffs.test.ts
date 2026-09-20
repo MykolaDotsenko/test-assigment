@@ -25,6 +25,28 @@ describe("input parsing", () => {
 });
 
 describe("consumer quotes", () => {
+  it("enforces Posti XXS minimum size and weight before using the €7.90 tariff", () => {
+    const exactMinimum = calculateQuotes({
+      ...base,
+      weightKg: 0.1,
+      lengthCm: 15,
+      widthCm: 15,
+      heightCm: 1,
+    }).find((quote) => quote.provider === "Posti");
+
+    const belowMinimumWeight = calculateQuotes({
+      ...base,
+      weightKg: 0.099,
+      lengthCm: 15,
+      widthCm: 15,
+      heightCm: 1,
+    }).find((quote) => quote.provider === "Posti");
+
+    expect(exactMinimum?.service).toContain("XXS");
+    expect(exactMinimum?.priceCents).toBe(790);
+    expect(belowMinimumWeight?.service).not.toContain("XXS");
+  });
+
   it("selects the smallest fitting official Posti and Matkahuolto sizes", () => {
     const quotes = calculateQuotes(base);
     const matkahuolto = quotes.find((quote) => quote.provider === "Matkahuolto");
@@ -105,6 +127,37 @@ describe("consumer quotes", () => {
 });
 
 describe("PostNord contract pricing", () => {
+  it("enforces the published 150 g and 15 × 10 × 1.5 cm minimums", () => {
+    const exactMinimum = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 0.15,
+      lengthCm: 15,
+      widthCm: 10,
+      heightCm: 1.5,
+    });
+    const tooLight = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 0.149,
+      lengthCm: 15,
+      widthCm: 10,
+      heightCm: 1.5,
+    });
+    const tooSmall = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 0.15,
+      lengthCm: 14.9,
+      widthCm: 10,
+      heightCm: 1.5,
+    });
+
+    expect(exactMinimum.length).toBeGreaterThan(0);
+    expect(tooLight).toHaveLength(0);
+    expect(tooSmall).toHaveLength(0);
+  });
+
   it("does not mix consumer tariffs into business/list-rate results", () => {
     const quotes = calculateQuotes({ ...base, audience: "business" });
 
