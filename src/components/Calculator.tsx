@@ -146,7 +146,8 @@ export default function Calculator() {
       </section>
 
       <section className="workspace-grid" id="shipment" aria-label="Shipment calculator">
-        <div className="composer-card">
+        <div className="calculator-column">
+          <div className="composer-card">
           <div className="section-heading">
             <div>
               <span className="eyebrow">Shipment</span>
@@ -268,6 +269,9 @@ export default function Calculator() {
               <span>Compare verified prices</span><span aria-hidden="true">→</span>
             </button>
           </form>
+          </div>
+
+          {submitted && <QuoteResult input={submitted} quotes={quotes} />}
         </div>
 
         <aside className="context-card" id="method">
@@ -288,12 +292,11 @@ export default function Calculator() {
         </aside>
       </section>
 
-      {submitted && <QuoteResult input={submitted} quotes={quotes} />}
       <ProviderDirectory />
 
       <footer className="page-footer">
         <div className="footer-brand">
-          <img src="/brand/logos/logo-monochrome-v2.webp" alt="" aria-hidden="true" width="180" height="68" />
+          <img src="/brand/logos/logo-icon-v2.webp" alt="" aria-hidden="true" width="180" height="68" />
           <strong>Pakettitutka</strong>
         </div>
         <p>Independent comparison demo. Final carrier checkout or invoice remains authoritative.</p>
