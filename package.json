@@ -3,7 +3,7 @@
   "private": true,
   "version": "3.0.0",
   "type": "module",
-  "description": "Radius Finland — a tariff-backed parcel and courier price engine for Finnish shipments.",
+  "description": "Pakettitutka — a tariff-backed parcel and courier price engine for Finnish shipments.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

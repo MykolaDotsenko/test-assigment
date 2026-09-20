@@ -25,6 +25,8 @@ test("business mode exposes PostNord list-rate calculations", async ({ page }) =
 
   await expect(page.getByText("PostNord").first()).toBeVisible();
   await expect(page.getByText("Contract list calculation").first()).toBeVisible();
+  await expect(page.getByText("Matkahuolto").first()).toHaveCount(0);
+  await expect(page.getByText("GLS Finland").first()).toHaveCount(0);
   await expect(page.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
 });
 

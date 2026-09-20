@@ -69,6 +69,16 @@ describe("consumer quotes", () => {
 });
 
 describe("PostNord contract pricing", () => {
+  it("does not mix consumer tariffs into business/list-rate results", () => {
+    const quotes = calculateQuotes({ ...base, audience: "business" });
+
+    expect(quotes.length).toBeGreaterThan(0);
+    expect(quotes.every((quote) => quote.audience === "business")).toBe(true);
+    expect(quotes.some((quote) => quote.provider === "Posti")).toBe(false);
+    expect(quotes.some((quote) => quote.provider === "Matkahuolto")).toBe(false);
+    expect(quotes.some((quote) => quote.provider === "GLS Finland")).toBe(false);
+  });
+
   it("uses volumetric weight when it exceeds actual weight", () => {
     const input: ParcelInput = {
       ...base,
