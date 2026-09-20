@@ -46,7 +46,7 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
         </div>
         {quotes[0]?.priceCents !== null && quotes[0] && (
           <div className="best-price">
-            <small>Lowest calculated</small>
+            <small>Lowest calculated here</small>
             <strong data-test-id="bestPrice">{formatPrice(quotes[0].priceCents)}</strong>
             <span>{quotes[0].provider}</span>
             {savingsCents !== null && <small className="savings-note">{formatPrice(savingsCents)} below the next calculated option</small>}
@@ -75,7 +75,7 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
                 </div>
                 <div className="quote-price-stack">
                   <strong className="quote-price">{formatPrice(quote.priceCents)}</strong>
-                  {index === 0 && <span className="best-label">Lowest calculated</span>}
+                  {index === 0 && <span className="best-label">Lowest calculated here</span>}
                 </div>
               </div>
               <div className="quote-badges">

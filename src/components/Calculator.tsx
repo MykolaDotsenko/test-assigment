@@ -180,7 +180,7 @@ export default function Calculator() {
                 </button>
               </div>
               <p className="field-help">
-                Public mode covers private senders and no-contract services. Contract mode currently calculates published PostNord list rates.
+                Public mode covers private senders and no-contract services. Business mode currently calculates published PostNord list rates.
               </p>
             </div>
 

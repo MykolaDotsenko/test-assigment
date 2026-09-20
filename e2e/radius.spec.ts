@@ -80,3 +80,13 @@ test("does not overflow horizontally", async ({ page }) => {
   }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.innerWidth);
 });
+
+
+test("filters the carrier directory by pricing availability", async ({ page }) => {
+  await page.getByRole("button", { name: /Live quote/ }).click();
+
+  const directory = page.locator("#providers");
+  await expect(directory.getByText("FedEx", { exact: true })).toBeVisible();
+  await expect(directory.getByText("Posti", { exact: true })).toHaveCount(0);
+  await expect(directory.getByText(/8 carriers shown/)).toBeVisible();
+});
