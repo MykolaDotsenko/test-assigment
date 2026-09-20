@@ -25,6 +25,28 @@ describe("input parsing", () => {
 });
 
 describe("consumer quotes", () => {
+  it("enforces Posti XXS minimum size and weight before using the €7.90 tariff", () => {
+    const exactMinimum = calculateQuotes({
+      ...base,
+      weightKg: 0.1,
+      lengthCm: 15,
+      widthCm: 15,
+      heightCm: 1,
+    }).find((quote) => quote.provider === "Posti");
+
+    const belowMinimumWeight = calculateQuotes({
+      ...base,
+      weightKg: 0.099,
+      lengthCm: 15,
+      widthCm: 15,
+      heightCm: 1,
+    }).find((quote) => quote.provider === "Posti");
+
+    expect(exactMinimum?.service).toContain("XXS");
+    expect(exactMinimum?.priceCents).toBe(790);
+    expect(belowMinimumWeight?.service).not.toContain("XXS");
+  });
+
   it("selects the smallest fitting official Posti and Matkahuolto sizes", () => {
     const quotes = calculateQuotes(base);
     const matkahuolto = quotes.find((quote) => quote.provider === "Matkahuolto");

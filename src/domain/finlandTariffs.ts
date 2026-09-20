@@ -64,12 +64,21 @@ interface BoxTariff {
   name: string;
   max: [number, number, number];
   maxWeightKg: number;
+  min?: [number, number, number];
+  minWeightKg?: number;
   priceCents: number;
   alandPriceCents?: number;
 }
 
 const POSTI_BOXES: BoxTariff[] = [
-  { name: "XXS", max: [3, 25, 35], maxWeightKg: 2, priceCents: 790 },
+  {
+    name: "XXS",
+    max: [3, 25, 35],
+    maxWeightKg: 2,
+    min: [1, 15, 15],
+    minWeightKg: 0.1,
+    priceCents: 790,
+  },
   { name: "S", max: [11, 32, 42], maxWeightKg: 25, priceCents: 990, alandPriceCents: 1490 },
   { name: "M", max: [19, 36, 60], maxWeightKg: 25, priceCents: 1190, alandPriceCents: 1690 },
   { name: "L", max: [36, 37, 60], maxWeightKg: 25, priceCents: 1690, alandPriceCents: 2090 },
@@ -123,9 +132,18 @@ function sortedDimensions(input: ParcelInput): [number, number, number] {
 
 function fitsRotatableBox(input: ParcelInput, box: BoxTariff): boolean {
   if (input.weightKg > box.maxWeightKg) return false;
+  if (box.minWeightKg !== undefined && input.weightKg < box.minWeightKg) return false;
+
   const parcel = sortedDimensions(input);
   const limits = [...box.max].sort((a, b) => a - b);
-  return parcel.every((dimension, index) => dimension <= limits[index]);
+  if (!parcel.every((dimension, index) => dimension <= limits[index])) return false;
+
+  if (box.min) {
+    const minimums = [...box.min].sort((a, b) => a - b);
+    if (!parcel.every((dimension, index) => dimension >= minimums[index])) return false;
+  }
+
+  return true;
 }
 
 function longestAndGirth(input: ParcelInput): { longest: number; lengthPlusGirth: number } {
@@ -154,7 +172,7 @@ function quotePosti(input: ParcelInput): Quote | null {
       audience: "consumer",
       priceCents,
       accuracy: "exact-public",
-      deliveryTime: "Domestic parcel service",
+      deliveryTime: "1–3 business days",
       explanation: aland
         ? "Official Posti online price to/from Åland for the smallest fitting parcel size."
         : "Official Posti online/OmaPosti domestic price for the smallest fitting parcel size.",
@@ -178,7 +196,7 @@ function quotePosti(input: ParcelInput): Quote | null {
       audience: "consumer",
       priceCents: aland ? 4890 : 4490,
       accuracy: "exact-public",
-      deliveryTime: "Domestic parcel service",
+      deliveryTime: "1–3 business days",
       explanation:
         "Official XXL price. Eligibility is checked using Posti's longest-side and length-plus-girth limits.",
       sourceLabel: "Posti parcel price list",
