@@ -66,7 +66,7 @@ export function getCurrencyFractionDigits(currency: string): number | null {
     const digits = new Intl.NumberFormat("en", {
       style: "currency",
       currency: currency.trim().toUpperCase(),
-    }).resolvedOptions().maximumFractionDigits;
+    }).resolvedOptions().maximumFractionDigits ?? 2;
 
     return Math.min(3, Math.max(0, digits));
   } catch {
