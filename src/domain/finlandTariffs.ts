@@ -54,6 +54,11 @@ const DHL_URL = "https://www.dhl.com/fi-en/home/express.html";
 const DSV_URL =
   "https://www.dsv.com/fi-fi/palvelumme/kuljetusmuodot/maantiekuljetukset/rahtilisat/polttoainelisat";
 const BRING_URL = "https://www.bring.fi/";
+const BUDBEE_URL = "https://www.instabee.com/";
+const KAUKOKIITO_URL = "https://www.kaukokiito.fi/en/";
+const JETPAK_URL = "https://jetpak.com/fi/";
+const DHL_FREIGHT_URL =
+  "https://www.dhl.com/fi-en/home/freight/help-center-for-european-road-and-rail/dhl-freight-surcharges.html";
 
 interface BoxTariff {
   name: string;
@@ -459,6 +464,46 @@ export const PROVIDER_DIRECTORY: ProviderDirectoryEntry[] = [
     sourceUrl: DSV_URL,
     sourceLabel: "DSV Finland fuel surcharges",
     freshness: "16 Sep 2026",
+  },
+  {
+    provider: "Budbee / Instabee",
+    scope: "E-commerce home & locker last-mile",
+    audience: "business",
+    status: "live-quote",
+    tariffSummary: "Active Finnish e-commerce delivery network with home and locker delivery. Merchant pricing is commercial/account-specific rather than a universal public sender tariff.",
+    sourceUrl: BUDBEE_URL,
+    sourceLabel: "Instabee official service overview",
+    freshness: "Finland operation verified Sep 2026",
+  },
+  {
+    provider: "Kaukokiito",
+    scope: "Domestic freight & distribution",
+    audience: "business",
+    status: "live-quote",
+    tariffSummary: "Nationwide Finnish freight and distribution operator. Transport pricing and remote-area/service fees depend on shipment and customer agreement.",
+    sourceUrl: KAUKOKIITO_URL,
+    sourceLabel: "Kaukokiito official site",
+    freshness: "2026 pricing updates verified",
+  },
+  {
+    provider: "Jetpak Finland",
+    scope: "Time-critical courier & express",
+    audience: "both",
+    status: "live-quote",
+    tariffSummary: "Same-day, next-day and time-critical door-to-door services in Finland and internationally. Price and ETA are produced for the specific booking.",
+    sourceUrl: JETPAK_URL,
+    sourceLabel: "Jetpak Finland",
+    freshness: "Active Finland network verified 2026",
+  },
+  {
+    provider: "DHL Freight",
+    scope: "Domestic & European road freight",
+    audience: "business",
+    status: "live-quote",
+    tariffSummary: "Road-freight pricing is shipment-specific and uses changing surcharges; domestic road-freight fuel surcharge is published separately.",
+    sourceUrl: DHL_FREIGHT_URL,
+    sourceLabel: "DHL Freight Finland surcharges",
+    freshness: "Current Sep 2026 surcharge schedule",
   },
   {
     provider: "Bring",

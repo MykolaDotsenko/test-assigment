@@ -12,9 +12,9 @@ export default function ProviderDirectory() {
       <div className="directory-heading">
         <div>
           <span className="eyebrow">Finnish carrier directory</span>
-          <h2 id="directory-title">Major parcel & courier operators serving Finland</h2>
+          <h2 id="directory-title">Parcel, express, last-mile & freight operators serving Finland</h2>
         </div>
-        <p>“All” is treated as major nationwide and international parcel/courier operators, not every local same-day courier company.</p>
+        <p>Coverage focuses on established nationwide, international, last-mile and time-critical operators with verifiable Finnish service. Small local courier firms are not represented as a complete national market list.</p>
       </div>
 
       <div className="directory-grid">
