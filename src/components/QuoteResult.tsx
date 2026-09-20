@@ -239,6 +239,7 @@ export default function QuoteResult({
                     <button
                       type="button"
                       className="quote-copy"
+                      data-test-id={`copy-${item.id}`}
                       onClick={() => void copyQuote(item)}
                       aria-live="polite"
                     >
