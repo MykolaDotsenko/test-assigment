@@ -10,7 +10,7 @@ import {
 const base: ParcelInput = {
   route: "mainland",
   weightKg: 1,
-  lengthCm: 20,
+  lengthCm: 25,
   widthCm: 15,
   heightCm: 5,
   audience: "consumer",
@@ -74,7 +74,7 @@ describe("consumer quotes", () => {
 
     expect(exactMinimum?.service).toContain("XXS");
     expect(exactMinimum?.priceCents).toBe(790);
-    expect(belowMinimumWeight?.service).not.toContain("XXS");
+    expect(belowMinimumWeight).toBeUndefined();
   });
 
   it("enforces the larger minimum footprint for regular Posti parcels", () => {

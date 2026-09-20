@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test("compares consumer tariffs and ranks the cheapest calculable option", async ({ page }) => {
   await page.locator('[data-test-id="weightKg"]').fill("1");
-  await page.locator('[data-test-id="lengthCm"]').fill("20");
+  await page.locator('[data-test-id="lengthCm"]').fill("25");
   await page.locator('[data-test-id="widthCm"]').fill("15");
   await page.locator('[data-test-id="heightCm"]').fill("5");
   await page.locator('[data-test-id="comparePrices"]').click();

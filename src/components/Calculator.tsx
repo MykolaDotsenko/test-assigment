@@ -24,7 +24,7 @@ interface FormState {
 const DEFAULT_FORM: FormState = {
   route: "mainland",
   weightKg: "1",
-  lengthCm: "20",
+  lengthCm: "25",
   widthCm: "15",
   heightCm: "5",
   audience: "consumer",
@@ -33,7 +33,7 @@ const DEFAULT_FORM: FormState = {
 };
 
 const PARCEL_PRESETS = [
-  { label: "Small", hint: "20 × 15 × 5 cm · 1 kg", weightKg: "1", lengthCm: "20", widthCm: "15", heightCm: "5" },
+  { label: "Small", hint: "25 × 15 × 5 cm · 1 kg", weightKg: "1", lengthCm: "25", widthCm: "15", heightCm: "5" },
   { label: "Medium", hint: "40 × 30 × 20 cm · 3 kg", weightKg: "3", lengthCm: "40", widthCm: "30", heightCm: "20" },
   { label: "Large", hint: "60 × 40 × 35 cm · 8 kg", weightKg: "8", lengthCm: "60", widthCm: "40", heightCm: "35" },
 ] as const;
