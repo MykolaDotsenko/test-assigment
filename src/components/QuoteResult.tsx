@@ -9,7 +9,7 @@ function badge(accuracy: Quote["accuracy"]) {
 
 export default function QuoteResult({ input, quotes }: { input: ParcelInput; quotes: Quote[] }) {
   return (
-    <section className="results-section" aria-live="polite" aria-labelledby="results-title">
+    <section className="results-section" data-test-id="results" aria-live="polite" aria-labelledby="results-title">
       <div className="results-heading">
         <div>
           <span className="eyebrow">Comparison</span>

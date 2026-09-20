@@ -23,11 +23,12 @@ test("business mode exposes PostNord list-rate calculations", async ({ page }) =
   await page.getByRole("button", { name: "Business / list rates" }).click();
   await page.locator('[data-test-id="comparePrices"]').click();
 
-  await expect(page.getByText("PostNord").first()).toBeVisible();
-  await expect(page.getByText("Contract list calculation").first()).toBeVisible();
-  await expect(page.getByText("Matkahuolto").first()).toHaveCount(0);
-  await expect(page.getByText("GLS Finland").first()).toHaveCount(0);
-  await expect(page.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
+  const results = page.locator('[data-test-id="results"]');
+  await expect(results.getByText("PostNord").first()).toBeVisible();
+  await expect(results.getByText("Contract list calculation").first()).toBeVisible();
+  await expect(results.getByText("Matkahuolto")).toHaveCount(0);
+  await expect(results.getByText("GLS Finland")).toHaveCount(0);
+  await expect(results.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
 });
 
 test("editing an input invalidates the visible comparison", async ({ page }) => {
