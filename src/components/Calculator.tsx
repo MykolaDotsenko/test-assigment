@@ -308,6 +308,8 @@ export default function Calculator() {
                   <input
                     data-test-id="weightKg"
                     inputMode="decimal"
+                    enterKeyHint="next"
+                    onFocus={(event) => event.currentTarget.select()}
                     value={form.weightKg}
                     onChange={(e) => update("weightKg", e.target.value)}
                     aria-invalid={Boolean(errors.weightKg)}
@@ -323,6 +325,8 @@ export default function Calculator() {
                       <input
                         data-test-id="lengthCm"
                         inputMode="decimal"
+                        enterKeyHint="next"
+                        onFocus={(event) => event.currentTarget.select()}
                         aria-label={c.form.length}
                         value={form.lengthCm}
                         onChange={(e) => update("lengthCm", e.target.value)}
@@ -335,6 +339,8 @@ export default function Calculator() {
                       <input
                         data-test-id="widthCm"
                         inputMode="decimal"
+                        enterKeyHint="next"
+                        onFocus={(event) => event.currentTarget.select()}
                         aria-label={c.form.width}
                         value={form.widthCm}
                         onChange={(e) => update("widthCm", e.target.value)}
@@ -347,6 +353,8 @@ export default function Calculator() {
                       <input
                         data-test-id="heightCm"
                         inputMode="decimal"
+                        enterKeyHint="done"
+                        onFocus={(event) => event.currentTarget.select()}
                         aria-label={c.form.height}
                         value={form.heightCm}
                         onChange={(e) => update("heightCm", e.target.value)}
