@@ -17,7 +17,7 @@ test("compares consumer tariffs and ranks the cheapest calculable option", async
   await expect(page.getByText("Matkahuolto").first()).toBeVisible();
   await expect(page.locator('[data-test-id="bestPrice"]')).toContainText("8,80");
   await expect(page.getByText("Published public tariff").first()).toBeVisible();
-  await expect(page.locator('[data-test-id="results"]').getByRole("link", { name: /Verify Matkahuolto pricing/ })).toBeVisible();
+  await expect(page.locator('[data-test-id="results"]').getByRole("link", { name: /Open official pricing: Matkahuolto/ })).toBeVisible();
 });
 
 test("business mode exposes PostNord list-rate calculations", async ({ page }) => {
@@ -90,7 +90,7 @@ test("filters the carrier directory by pricing availability", async ({ page }) =
   const directory = page.locator("#providers");
   await expect(directory.getByText("FedEx", { exact: true })).toBeVisible();
   await expect(directory.getByText("Posti", { exact: true })).toHaveCount(0);
-  await expect(directory.getByText(/8 carriers shown/)).toBeVisible();
+  await expect(directory.getByText(/8 shown/)).toBeVisible();
 });
 
 
@@ -173,6 +173,8 @@ test("keeps key controls at least 44px tall for touch use", async ({ page }) => 
     '.preset-row .preset-button',
     '.site-nav a',
     '.directory-filter',
+    '.language-option',
+    '.dimension-field input',
   ];
 
   for (const selector of selectors) {
@@ -186,4 +188,53 @@ test("keeps key controls at least 44px tall for touch use", async ({ page }) => 
       expect(box?.height ?? 0, `${selector} should be at least 44px tall`).toBeGreaterThanOrEqual(44);
     }
   }
+});
+
+
+test("switches the primary UX fully between English and Finnish", async ({ page }) => {
+  await page.getByRole("button", { name: "FI", exact: true }).click();
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "fi");
+  await expect(page.getByRole("heading", { name: "Mitä olet lähettämässä?" })).toBeVisible();
+  await expect(page.locator('[data-test-id="comparePrices"]')).toContainText("Vertaa vahvistettuja hintoja");
+  await expect(page.getByRole("link", { name: "Kuljetusyhtiöt" })).toBeVisible();
+
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { name: "What are you sending?" })).toBeVisible();
+});
+
+test("keeps the calculator near the top on mobile", async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width > 720, "Mobile layout assertion");
+
+  const shipmentTop = await page.locator("#shipment").evaluate((element) =>
+    element.getBoundingClientRect().top,
+  );
+
+  expect(shipmentTop).toBeLessThan(360);
+  await expect(page.locator(".hero-visual")).toBeHidden();
+});
+
+test("keeps L × W × H compact on narrow mobile", async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width > 470, "Narrow-mobile layout assertion");
+
+  const lengthBox = await page.locator('[data-test-id="lengthCm"]').boundingBox();
+  const widthBox = await page.locator('[data-test-id="widthCm"]').boundingBox();
+  const heightBox = await page.locator('[data-test-id="heightCm"]').boundingBox();
+
+  expect(lengthBox).not.toBeNull();
+  expect(widthBox).not.toBeNull();
+  expect(heightBox).not.toBeNull();
+  expect(Math.abs((lengthBox?.y ?? 0) - (widthBox?.y ?? 0))).toBeLessThan(4);
+  expect(Math.abs((widthBox?.y ?? 0) - (heightBox?.y ?? 0))).toBeLessThan(4);
+});
+
+test("shows calculated carriers first instead of the full directory", async ({ page }) => {
+  const directory = page.locator("#providers");
+  await expect(directory.getByRole("button", { name: /Calculated/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(directory.getByText("Posti", { exact: true })).toBeVisible();
+  await expect(directory.getByText("FedEx", { exact: true })).toHaveCount(0);
 });
