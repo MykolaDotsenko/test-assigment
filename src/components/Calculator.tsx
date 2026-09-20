@@ -148,7 +148,7 @@ export default function Calculator() {
 
       <header className="site-header" aria-label="Pakettitutka navigation">
         <a className="brand-lockup" href="#" aria-label="Pakettitutka">
-          <img src="/brand/logos/logo-primary-v2.webp" alt="Pakettitutka" width="220" height="82" />
+          <img src="brand/logos/logo-primary-v2.webp" alt="Pakettitutka" width="220" height="82" />
         </a>
 
         <nav className="site-nav" aria-label="Primary navigation">
@@ -190,7 +190,7 @@ export default function Calculator() {
         <div className="hero-visual" aria-hidden="true">
           <div className="hero-visual-glow" />
           <img
-            src="/brand/visuals/hero-finland.webp"
+            src="brand/visuals/hero-finland.webp"
             alt=""
             width="1100"
             height="1100"
@@ -398,7 +398,7 @@ export default function Calculator() {
         </div>
 
         <aside className="context-card" id="method">
-          <img className="context-radar" src="/brand/visuals/background-radar.webp" alt="" aria-hidden="true" />
+          <img className="context-radar" src="brand/visuals/background-radar.webp" alt="" aria-hidden="true" />
           <div className="context-content">
             <span className="eyebrow">{c.method.eyebrow}</span>
             <h2>{c.method.title}</h2>
@@ -422,7 +422,7 @@ export default function Calculator() {
 
       <footer className="page-footer">
         <div className="footer-brand">
-          <img src="/brand/logos/logo-icon-v2.webp" alt="" aria-hidden="true" width="180" height="68" />
+          <img src="brand/logos/logo-icon-v2.webp" alt="" aria-hidden="true" width="180" height="68" />
           <strong>Pakettitutka</strong>
         </div>
         <p>{c.footer}</p>
