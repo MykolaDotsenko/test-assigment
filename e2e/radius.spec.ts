@@ -64,7 +64,7 @@ test("plans a global route from human-readable place names", async ({ page }) =>
   await page.locator('[data-test-id="toQuery"]').fill("Helsinki Airport, Finland");
   await page.locator('[data-test-id="planDelivery"]').click();
 
-  await expect(page.getByText("Planning estimate")).toBeVisible();
+  await expect(page.getByText("Planning estimate", { exact: true })).toBeVisible();
   await expect(page.locator('[data-test-id="estimateRange"]')).toBeVisible();
   await expect(page.locator('[data-test-id="roadDistance"]')).toContainText("km");
   await expect(page.getByLabel("Resolved from resolved place")).toBeVisible();
@@ -74,11 +74,11 @@ test("invalidates a resolved route as soon as a place query changes", async ({ p
   await page.locator('[data-test-id="fromQuery"]').fill("Turku, Finland");
   await page.locator('[data-test-id="toQuery"]').fill("Helsinki Airport, Finland");
   await page.locator('[data-test-id="planDelivery"]').click();
-  await expect(page.getByText("Planning estimate")).toBeVisible();
+  await expect(page.getByText("Planning estimate", { exact: true })).toBeVisible();
 
   await page.locator('[data-test-id="fromQuery"]').fill("Tampere, Finland");
 
-  await expect(page.getByText("Planning estimate")).toHaveCount(0);
+  await expect(page.getByText("Planning estimate", { exact: true })).toHaveCount(0);
 });
 
 test("falls back to Open-Meteo locality search when Photon is unavailable", async ({ page }) => {
@@ -119,7 +119,7 @@ test("falls back to Open-Meteo locality search when Photon is unavailable", asyn
   await page.locator('[data-test-id="toQuery"]').fill("Helsinki");
   await page.locator('[data-test-id="planDelivery"]').click();
 
-  await expect(page.getByText("Planning estimate")).toBeVisible();
+  await expect(page.getByText("Planning estimate", { exact: true })).toBeVisible();
   await expect(page.getByText("Open-Meteo / GeoNames").first()).toBeVisible();
 });
 
@@ -148,7 +148,7 @@ test("has no serious or critical WCAG A/AA violations in the result state", asyn
   await page.locator('[data-test-id="fromQuery"]').fill("Turku, Finland");
   await page.locator('[data-test-id="toQuery"]').fill("Helsinki Airport, Finland");
   await page.locator('[data-test-id="planDelivery"]').click();
-  await expect(page.getByText("Planning estimate")).toBeVisible();
+  await expect(page.getByText("Planning estimate", { exact: true })).toBeVisible();
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
