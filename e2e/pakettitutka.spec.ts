@@ -246,7 +246,7 @@ test("copy action always resolves to success or a manual fallback", async ({ pag
   await page.locator('[data-test-id="comparePrices"]').click();
 
   const results = page.locator('[data-test-id="results"]');
-  const copy = results.getByRole("button", { name: "Copy shipment details" }).first();
+  const copy = results.locator('[data-test-id="copy-matkahuolto-s"]');
   await copy.click();
 
   await expect(copy).not.toHaveText("Copy shipment details", { timeout: 2000 });
