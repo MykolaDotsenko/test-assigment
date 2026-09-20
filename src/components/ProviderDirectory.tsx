@@ -1,14 +1,14 @@
 import { PROVIDER_DIRECTORY } from "../domain/finlandTariffs";
 
 const statusLabel = {
-  calculated: "Calculated in Radius",
+  calculated: "Calculated in Pakettitutka",
   "live-quote": "Official live quote",
   inactive: "Not currently available from Finland",
 } as const;
 
 export default function ProviderDirectory() {
   return (
-    <section className="directory-section" aria-labelledby="directory-title">
+    <section className="directory-section" id="providers" aria-labelledby="directory-title">
       <div className="directory-heading">
         <div>
           <span className="eyebrow">Finnish carrier directory</span>
