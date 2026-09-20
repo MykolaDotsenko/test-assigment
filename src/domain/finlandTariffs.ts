@@ -48,7 +48,6 @@ const MATKAHUOLTO_URL = "https://www.matkahuolto.fi/packages/domestic-parcels";
 const GLS_URL = "https://gls-group.com/FI/en/ship-with-gls/Consumers-Small-Businesses/";
 const POSTNORD_URL =
   "https://www.postnord.fi/siteassets/pdf/hinnastot/online_hinnastoliite_2026-02-01.pdf";
-const POSTNORD_FUEL_URL = "https://www.postnord.fi/en/sending/fuel-and-sulphur-surcharge";
 const FEDEX_URL = "https://www.fedex.com/en-fi/shipping/rates/fedex-rates.html";
 const UPS_URL = "https://www.ups.com/fi/en/support/shipping-support/shipping-costs-rates";
 const DHL_URL = "https://www.dhl.com/fi-en/home/express.html";
