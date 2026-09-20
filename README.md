@@ -1,10 +1,12 @@
-# Radius Finland — Courier Price Engine
+# Pakettitutka — Finnish Parcel Price Intelligence
 
 [![Quality](https://github.com/MykolaDotsenko/test-assigment/actions/workflows/quality.yml/badge.svg)](https://github.com/MykolaDotsenko/test-assigment/actions/workflows/quality.yml)
 
 **A Finland-specific parcel and courier comparison engine built around verified carrier tariffs instead of generic delivery estimates.**
 
 [**Open the live app →**](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md)
+
+![Pakettitutka brand](./public/brand/visuals/brand-board.webp)
 
 ## Why Finland-specific?
 
@@ -17,7 +19,18 @@ A generic “price per kilometre” estimator cannot be genuinely accurate for p
 - FedEx / UPS / DHL: list rates plus dynamic fuel, area and handling surcharges;
 - DSV: contract/spot freight plus frequently changing fuel surcharges.
 
-Radius therefore models each carrier separately and exposes an **accuracy label** for every result.
+Pakettitutka therefore models each carrier separately and exposes an **accuracy label** for every result.
+
+## Product experience
+
+- branded, responsive comparison flow designed for desktop and mobile;
+- transparent pricing confidence instead of a misleading single “estimate”;
+- official tariff links embedded directly in results and carrier cards;
+- separate consumer and business/list-rate modes;
+- accessible controls, focus states and reduced-motion support;
+- Finland-first visual system with a dedicated Pakettitutka asset library.
+
+Brand assets live under `public/brand/` and are split into `logos/`, `visuals/`, and `mockups/`.
 
 ## Calculated carriers
 
@@ -34,7 +47,7 @@ Official online/OmaPosti domestic prices from 2 June 2026:
 | XL | 40 × 60 × 100 cm | €22.90 |
 | XXL | longest side ≤ 200 cm, length + circumference ≤ 300 cm | €44.90 |
 
-Maximum weight for S–XXL is 25 kg. Radius also applies Posti's separate Åland tariff when a 22xxx postal code is involved.
+Maximum weight for S–XXL is 25 kg. Pakettitutka also applies Posti's separate Åland tariff when a 22xxx postal code is involved.
 
 Source: https://www.posti.fi/en/sending/parcels/package-price-lists
 
@@ -48,7 +61,7 @@ Current prices that the official public domestic page exposes directly:
 | S | 10 × 40 × 55 cm | €8.80 |
 | M | 20 × 40 × 55 cm | €11.80 |
 
-Matkahuolto also offers larger sizes. Radius deliberately does **not** fill missing current consumer prices from old price lists.
+Matkahuolto also offers larger sizes. Pakettitutka deliberately does **not** fill missing current consumer prices from old price lists.
 
 Source: https://www.matkahuolto.fi/packages/domestic-parcels
 
@@ -68,7 +81,7 @@ Source: https://gls-group.com/FI/en/ship-with-gls/Consumers-Small-Businesses/
 
 ### PostNord — business/list-rate mode
 
-Radius calculates PostNord **Automaatti** and **Palvelupiste** from the official 2026 list rate.
+Pakettitutka calculates PostNord **Automaatti** and **Palvelupiste** from the official 2026 list rate.
 
 Pricing basis:
 
@@ -90,7 +103,7 @@ Sources:
 
 ## Carrier directory
 
-Radius also lists major operators that cannot be honestly reduced to one static public price:
+Pakettitutka also lists major operators that cannot be honestly reduced to one static public price:
 
 - FedEx — 2026 standard list rates + weekly fuel/area/handling surcharges
 - UPS — rate guide + fuel/remote/demand surcharges

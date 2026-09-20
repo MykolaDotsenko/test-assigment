@@ -356,15 +356,18 @@ function quotePostNord(
 }
 
 export function calculateQuotes(input: ParcelInput): Quote[] {
-  const quotes: Quote[] = [
-    quotePosti(input),
-    quoteMatkahuolto(input),
-    quoteGls(input),
-    quotePostNord(input, "locker"),
-    quotePostNord(input, "service-point"),
-  ].filter((quote): quote is Quote => quote !== null);
+  const candidates =
+    input.audience === "consumer"
+      ? [quotePosti(input), quoteMatkahuolto(input), quoteGls(input)]
+      : [quotePostNord(input, "locker"), quotePostNord(input, "service-point")];
 
-  return quotes.sort((a, b) => (a.priceCents ?? Number.POSITIVE_INFINITY) - (b.priceCents ?? Number.POSITIVE_INFINITY));
+  const quotes = candidates.filter((quote): quote is Quote => quote !== null);
+
+  return quotes.sort(
+    (a, b) =>
+      (a.priceCents ?? Number.POSITIVE_INFINITY) -
+      (b.priceCents ?? Number.POSITIVE_INFINITY),
+  );
 }
 
 export const PROVIDER_DIRECTORY: ProviderDirectoryEntry[] = [
@@ -383,7 +386,7 @@ export const PROVIDER_DIRECTORY: ProviderDirectoryEntry[] = [
     scope: "Domestic consumer parcels",
     audience: "consumer",
     status: "calculated",
-    tariffSummary: "Official public current prices: XXS €5.90 · S €8.80 · M €11.80. Larger sizes are available, but Radius does not guess prices not exposed in the current public index.",
+    tariffSummary: "Official public current prices: XXS €5.90 · S €8.80 · M €11.80. Larger sizes are available, but Pakettitutka does not guess prices not exposed in the current public index.",
     sourceUrl: MATKAHUOLTO_URL,
     sourceLabel: "Official domestic parcel page",
     freshness: "Verified 20 Sep 2026",
@@ -403,7 +406,7 @@ export const PROVIDER_DIRECTORY: ProviderDirectoryEntry[] = [
     scope: "Domestic contract parcels",
     audience: "business",
     status: "calculated",
-    tariffSummary: "Weight-band list rates excl. VAT + current fuel surcharge. Radius calculates Locker and Service Point using max(actual, 280 kg/m³ volumetric weight).",
+    tariffSummary: "Weight-band list rates excl. VAT + current fuel surcharge. Pakettitutka calculates Locker and Service Point using max(actual, 280 kg/m³ volumetric weight).",
     sourceUrl: POSTNORD_URL,
     sourceLabel: "Official 2026 service price list",
     freshness: "Fuel surcharge 10.4% from 1 Sep 2026",

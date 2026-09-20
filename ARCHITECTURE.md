@@ -1,6 +1,6 @@
-# Radius Finland architecture
+# Pakettitutka architecture
 
-Radius is a carrier-specific tariff engine. It intentionally does not share one generic pricing formula across providers.
+Pakettitutka is a carrier-specific tariff engine. It intentionally does not share one generic pricing formula across providers.
 
 ## Flow
 
@@ -40,7 +40,7 @@ Rotation-aware size matching selects the smallest eligible XXS–XL product. XXL
 
 ### Matkahuolto
 
-Radius prices only the current consumer sizes whose prices are directly exposed by the official public page. Larger services remain visible in the provider directory rather than being filled from stale historic tariffs.
+Pakettitutka prices only the current consumer sizes whose prices are directly exposed by the official public page. Larger services remain visible in the provider directory rather than being filled from stale historic tariffs.
 
 ### GLS
 
@@ -59,7 +59,7 @@ max(actual, volumetric)
 → Finnish VAT
 ```
 
-Only nationwide domestic Locker and Service Point products are auto-calculated. Radius does not guess PostNord Home zone/rural/island pricing without the full official postal-code surcharge model.
+Only nationwide domestic Locker and Service Point products are auto-calculated. Pakettitutka does not guess PostNord Home zone/rural/island pricing without the full official postal-code surcharge model.
 
 ## Data freshness
 

@@ -84,26 +84,56 @@ export default function Calculator() {
 
   return (
     <main className="app-shell">
-      <header className="hero">
-        <div className="brand-mark" aria-hidden="true"><span /></div>
+      <a className="skip-link" href="#shipment">Skip to shipment calculator</a>
+
+      <header className="site-header" aria-label="Pakettitutka navigation">
+        <a className="brand-lockup" href="#" aria-label="Pakettitutka home">
+          <img src="/brand/logos/logo-primary-v2.webp" alt="Pakettitutka" width="220" height="82" />
+        </a>
+        <nav className="site-nav" aria-label="Primary navigation">
+          <a href="#shipment">Compare</a>
+          <a href="#method">Method</a>
+          <a href="#providers">Carriers</a>
+        </nav>
+        <span className="market-chip">Finland · tariff-backed</span>
+      </header>
+
+      <section className="hero" aria-labelledby="hero-title">
         <div className="hero-copy">
-          <span className="eyebrow">Radius Finland · Courier price engine</span>
-          <h1>Compare parcel prices across Finland without guessing.</h1>
+          <span className="eyebrow">Pakettitutka · Finnish parcel intelligence</span>
+          <h1 id="hero-title">Compare parcel prices across Finland without guessing.</h1>
           <p>
-            Enter two postal codes, weight and dimensions. Radius applies verified Finnish carrier
+            Enter two postal codes, weight and dimensions. Pakettitutka applies verified Finnish carrier
             rules and labels every result by pricing confidence: public tariff, contract list rate,
             live quote, or inactive service.
           </p>
-          <div className="trust-row">
+          <div className="hero-actions">
+            <a className="hero-primary" href="#shipment">Compare a parcel <span aria-hidden="true">↓</span></a>
+            <a className="hero-secondary" href="#method">See the pricing method</a>
+          </div>
+          <div className="trust-row" aria-label="Pricing trust signals">
             <span>Official tariff sources</span>
             <span>Dimensions + volumetric weight</span>
             <span>Fuel + VAT where published</span>
             <span>Snapshot {TARIFF_SNAPSHOT_DATE}</span>
           </div>
         </div>
-      </header>
 
-      <section className="workspace-grid">
+        <div className="hero-visual" aria-hidden="true">
+          <div className="hero-visual-glow" />
+          <img src="/brand/visuals/hero-finland.webp" alt="" width="1100" height="1100" />
+          <div className="hero-float hero-float--top">
+            <span>Tariff scope</span>
+            <strong>Finland-first</strong>
+          </div>
+          <div className="hero-float hero-float--bottom">
+            <span>Pricing model</span>
+            <strong>Rules, not averages</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="workspace-grid" id="shipment" aria-label="Shipment calculator">
         <div className="composer-card">
           <div className="section-heading">
             <div>
@@ -121,6 +151,7 @@ export default function Calculator() {
                 type="button"
                 className={form.audience === "consumer" ? "segment active" : "segment"}
                 onClick={() => update("audience", "consumer")}
+                aria-pressed={form.audience === "consumer"}
               >
                 Private sender
               </button>
@@ -128,6 +159,7 @@ export default function Calculator() {
                 type="button"
                 className={form.audience === "business" ? "segment active" : "segment"}
                 onClick={() => update("audience", "business")}
+                aria-pressed={form.audience === "business"}
               >
                 Business / list rates
               </button>
@@ -136,12 +168,12 @@ export default function Calculator() {
             <div className="postal-grid">
               <label className="field-group">
                 <span>From postal code</span>
-                <input data-test-id="fromPostalCode" inputMode="numeric" maxLength={5} value={form.fromPostalCode} onChange={(e) => update("fromPostalCode", e.target.value)} aria-invalid={Boolean(errors.fromPostalCode)} />
+                <input data-test-id="fromPostalCode" inputMode="numeric" autoComplete="postal-code" maxLength={5} value={form.fromPostalCode} onChange={(e) => update("fromPostalCode", e.target.value)} aria-invalid={Boolean(errors.fromPostalCode)} />
                 {errors.fromPostalCode && <small className="field-error">{errors.fromPostalCode}</small>}
               </label>
               <label className="field-group">
                 <span>To postal code</span>
-                <input data-test-id="toPostalCode" inputMode="numeric" maxLength={5} value={form.toPostalCode} onChange={(e) => update("toPostalCode", e.target.value)} aria-invalid={Boolean(errors.toPostalCode)} />
+                <input data-test-id="toPostalCode" inputMode="numeric" autoComplete="postal-code" maxLength={5} value={form.toPostalCode} onChange={(e) => update("toPostalCode", e.target.value)} aria-invalid={Boolean(errors.toPostalCode)} />
                 {errors.toPostalCode && <small className="field-error">{errors.toPostalCode}</small>}
               </label>
             </div>
@@ -190,17 +222,20 @@ export default function Calculator() {
           </form>
         </div>
 
-        <aside className="context-card">
-          <span className="eyebrow">Accuracy first</span>
-          <h2>No invented “average courier price”.</h2>
-          <div className="formula-stack">
-            <div><span>01</span><p><strong>Fit the parcel</strong><small>Carrier dimensions can rotate; girth rules are evaluated separately.</small></p></div>
-            <div><span>02</span><p><strong>Apply tariff logic</strong><small>Flat size bands, weight bands or volumetric weight depending on carrier.</small></p></div>
-            <div><span>03</span><p><strong>Add real surcharges</strong><small>Fuel and VAT are included only when an official rule is known.</small></p></div>
-          </div>
-          <div className="architecture-note">
-            <span>Important</span>
-            <p>Contract discounts, temporary promotions and account-specific pricing can beat published list rates. Radius never labels those as exact consumer prices.</p>
+        <aside className="context-card" id="method">
+          <img className="context-radar" src="/brand/visuals/background-radar.webp" alt="" aria-hidden="true" />
+          <div className="context-content">
+            <span className="eyebrow">Accuracy first</span>
+            <h2>No invented “average courier price”.</h2>
+            <div className="formula-stack">
+              <div><span>01</span><p><strong>Fit the parcel</strong><small>Carrier dimensions can rotate; girth rules are evaluated separately.</small></p></div>
+              <div><span>02</span><p><strong>Apply tariff logic</strong><small>Flat size bands, weight bands or volumetric weight depending on carrier.</small></p></div>
+              <div><span>03</span><p><strong>Add real surcharges</strong><small>Fuel and VAT are included only when an official rule is known.</small></p></div>
+            </div>
+            <div className="architecture-note">
+              <span>Important</span>
+              <p>Contract discounts, temporary promotions and account-specific pricing can beat published list rates. Pakettitutka never labels those as exact consumer prices.</p>
+            </div>
           </div>
         </aside>
       </section>
@@ -209,8 +244,11 @@ export default function Calculator() {
       <ProviderDirectory />
 
       <footer className="page-footer">
-        <strong>Radius Finland</strong>
-        <p>Independent comparison demo. Final carrier checkout/invoice remains authoritative.</p>
+        <div className="footer-brand">
+          <img src="/brand/logos/logo-monochrome-v2.webp" alt="" aria-hidden="true" width="180" height="68" />
+          <strong>Pakettitutka</strong>
+        </div>
+        <p>Independent comparison demo. Final carrier checkout or invoice remains authoritative.</p>
       </footer>
     </main>
   );
