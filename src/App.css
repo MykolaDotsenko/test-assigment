@@ -921,3 +921,26 @@
     flex-direction: column;
   }
 }
+
+
+.results-section:focus {
+  outline: none;
+}
+
+.empty-result-link {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  color: var(--accent-strong);
+  font-size: .78rem;
+  font-weight: 820;
+  text-decoration: none;
+}
+
+.empty-result-link:hover,
+.empty-result-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { formatPrice, type ParcelInput, type Quote } from "../domain/finlandTariffs";
 
 function badge(accuracy: Quote["accuracy"]) {
@@ -8,6 +9,12 @@ function badge(accuracy: Quote["accuracy"]) {
 }
 
 export default function QuoteResult({ input, quotes }: { input: ParcelInput; quotes: Quote[] }) {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    sectionRef.current?.focus();
+  }, []);
+
   const secondPrice = quotes[1]?.priceCents ?? null;
   const bestPrice = quotes[0]?.priceCents ?? null;
   const savingsCents =
@@ -37,7 +44,14 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
           };
 
   return (
-    <section className="results-section" data-test-id="results" aria-live="polite" aria-labelledby="results-title">
+    <section
+      ref={sectionRef}
+      className="results-section"
+      data-test-id="results"
+      aria-live="polite"
+      aria-labelledby="results-title"
+      tabIndex={-1}
+    >
       <div className="results-heading">
         <div>
           <span className="eyebrow">Comparison</span>
@@ -62,7 +76,10 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
       {quotes.length === 0 ? (
         <div className="empty-result">
           <strong>No tariff-backed option fits these inputs.</strong>
-          <span>Check the provider directory below for live-quote carriers or reduce parcel dimensions/weight.</span>
+          <span>This shipment may need a larger-parcel, freight or route-specific quote.</span>
+          <a className="empty-result-link" href="#providers">
+            Browse live-quote carriers <span aria-hidden="true">↓</span>
+          </a>
         </div>
       ) : (
         <div className="quote-list">

@@ -12,6 +12,8 @@ test("compares consumer tariffs and ranks the cheapest calculable option", async
   await page.locator('[data-test-id="heightCm"]').fill("5");
   await page.locator('[data-test-id="comparePrices"]').click();
 
+  const results = page.locator('[data-test-id="results"]');
+  await expect(results).toBeFocused();
   await expect(page.getByText("Matkahuolto").first()).toBeVisible();
   await expect(page.locator('[data-test-id="bestPrice"]')).toContainText("8,80");
   await expect(page.getByText("Published public tariff").first()).toBeVisible();
@@ -104,4 +106,18 @@ test("clears hidden GLS modifiers when pricing context changes", async ({ page }
 
   await expect(page.getByRole("checkbox", { name: /Pickup from sender/ })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Deliver to recipient/ })).not.toBeChecked();
+});
+
+
+test("guides unsupported shipments to live-quote carriers", async ({ page }) => {
+  await page.locator('[data-test-id="weightKg"]').fill("100");
+  await page.locator('[data-test-id="lengthCm"]').fill("250");
+  await page.locator('[data-test-id="widthCm"]').fill("100");
+  await page.locator('[data-test-id="heightCm"]').fill("100");
+  await page.locator('[data-test-id="comparePrices"]').click();
+
+  const results = page.locator('[data-test-id="results"]');
+  await expect(results).toBeFocused();
+  await expect(results.getByText("No tariff-backed option fits these inputs.")).toBeVisible();
+  await expect(results.getByRole("link", { name: /Browse live-quote carriers/ })).toHaveAttribute("href", "#providers");
 });
