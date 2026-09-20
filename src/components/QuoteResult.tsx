@@ -1,8 +1,8 @@
 import { formatPrice, type ParcelInput, type Quote } from "../domain/finlandTariffs";
 
 function badge(accuracy: Quote["accuracy"]) {
-  if (accuracy === "exact-public") return "Exact public tariff";
-  if (accuracy === "exact-list") return "Contract list calculation";
+  if (accuracy === "exact-public") return "Published public tariff";
+  if (accuracy === "exact-list") return "Published list calculation";
   if (accuracy === "inactive") return "Inactive";
   return "Live quote";
 }
@@ -77,7 +77,7 @@ export default function QuoteResult({ input, quotes }: { input: ParcelInput; quo
               </div>
               <div className="quote-badges">
                 <span className={`accuracy accuracy--${quote.accuracy}`}>{badge(quote.accuracy)}</span>
-                <span>{quote.audience === "consumer" ? "Private" : "Business"}</span>
+                <span>{quote.audience === "consumer" ? "Public / no-contract" : "Business list"}</span>
                 <span>{quote.deliveryTime}</span>
               </div>
               <p>{quote.explanation}</p>

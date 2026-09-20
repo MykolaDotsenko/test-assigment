@@ -782,3 +782,35 @@
   font-size: .76rem;
   line-height: 1.55;
 }
+
+
+.directory-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.directory-metrics span {
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.68);
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.directory-metrics strong { color: var(--ink); }
+
+.freshness-warning {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 13px 15px;
+  border: 1px solid rgba(164,56,43,.2);
+  border-radius: 15px;
+  background: #fff7f4;
+  color: #6f352d;
+  font-size: .76rem;
+  line-height: 1.5;
+}

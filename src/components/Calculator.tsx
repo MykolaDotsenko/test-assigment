@@ -176,7 +176,7 @@ export default function Calculator() {
                   onClick={() => update("audience", "business")}
                   aria-pressed={form.audience === "business"}
                 >
-                  Business contract rates
+                  Business list rates
                 </button>
               </div>
               <p className="field-help">
