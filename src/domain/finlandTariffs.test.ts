@@ -25,6 +25,36 @@ describe("input parsing", () => {
 });
 
 describe("consumer quotes", () => {
+  it.each([
+    { label: "XXS", input: { weightKg: 0.1, lengthCm: 15, widthCm: 15, heightCm: 1 }, priceCents: 790 },
+    { label: "S", input: { weightKg: 1, lengthCm: 25, widthCm: 15, heightCm: 4 }, priceCents: 990 },
+    { label: "M", input: { weightKg: 1, lengthCm: 50, widthCm: 35, heightCm: 15 }, priceCents: 1190 },
+    { label: "L", input: { weightKg: 1, lengthCm: 55, widthCm: 37, heightCm: 30 }, priceCents: 1690 },
+    { label: "XL", input: { weightKg: 1, lengthCm: 80, widthCm: 50, heightCm: 38 }, priceCents: 2290 },
+    { label: "XXL", input: { weightKg: 1, lengthCm: 120, widthCm: 50, heightCm: 20 }, priceCents: 4490 },
+  ])("matches the published Posti $label tariff", ({ label, input, priceCents }) => {
+    const quote = calculateQuotes({ ...base, ...input }).find((item) => item.provider === "Posti");
+
+    expect(quote?.service).toContain(`${label} parcel`);
+    expect(quote?.priceCents).toBe(priceCents);
+  });
+
+  it.each([
+    { weightKg: 1, priceCents: 2400 },
+    { weightKg: 3, priceCents: 2900 },
+    { weightKg: 15, priceCents: 5900 },
+    { weightKg: 25, priceCents: 8400 },
+  ])("matches the GLS public band at $weightKg kg", ({ weightKg, priceCents }) => {
+    const quote = calculateQuotes({
+      ...base,
+      weightKg,
+      lengthCm: 40,
+      widthCm: 30,
+      heightCm: 20,
+    }).find((item) => item.provider === "GLS Finland");
+
+    expect(quote?.priceCents).toBe(priceCents);
+  });
   it("enforces Posti XXS minimum size and weight before using the €7.90 tariff", () => {
     const exactMinimum = calculateQuotes({
       ...base,
@@ -160,6 +190,50 @@ describe("consumer quotes", () => {
 });
 
 describe("PostNord contract pricing", () => {
+  it.each([
+    { weightKg: 0.25, lockerCents: 679, servicePointCents: 707 },
+    { weightKg: 1, lockerCents: 679, servicePointCents: 707 },
+    { weightKg: 2, lockerCents: 744, servicePointCents: 773 },
+    { weightKg: 5, lockerCents: 759, servicePointCents: 787 },
+    { weightKg: 10, lockerCents: 773, servicePointCents: 801 },
+    { weightKg: 15, lockerCents: 822, servicePointCents: 822 },
+    { weightKg: 20, lockerCents: 822, servicePointCents: 822 },
+  ])(
+    "matches PostNord list-rate totals at $weightKg kg",
+    ({ weightKg, lockerCents, servicePointCents }) => {
+      const quotes = calculateQuotes({
+        ...base,
+        audience: "business",
+        weightKg,
+        lengthCm: 15,
+        widthCm: 10,
+        heightCm: 1.5,
+      });
+
+      expect(quotes.find((item) => item.id === "postnord-locker")?.priceCents).toBe(lockerCents);
+      expect(quotes.find((item) => item.id === "postnord-service-point")?.priceCents).toBe(servicePointCents);
+    },
+  );
+
+  it.each([
+    { weightKg: 25, expectedCents: 836 },
+    { weightKg: 30, expectedCents: 857 },
+  ])(
+    "keeps heavier parcels on PostNord service-point only at $weightKg kg",
+    ({ weightKg, expectedCents }) => {
+      const quotes = calculateQuotes({
+        ...base,
+        audience: "business",
+        weightKg,
+        lengthCm: 15,
+        widthCm: 10,
+        heightCm: 1.5,
+      });
+
+      expect(quotes.find((item) => item.id === "postnord-locker")).toBeUndefined();
+      expect(quotes.find((item) => item.id === "postnord-service-point")?.priceCents).toBe(expectedCents);
+    },
+  );
   it("enforces the published 150 g and 15 × 10 × 1.5 cm minimums", () => {
     const exactMinimum = calculateQuotes({
       ...base,
