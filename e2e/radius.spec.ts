@@ -146,3 +146,44 @@ test("validates the optional business destination postcode without requiring it"
   await expect(page.getByText("Use a 5-digit Finnish postal code or leave it blank.")).toBeVisible();
   await expect(page.getByText("Comparison", { exact: true })).toHaveCount(0);
 });
+
+
+test("serves branded install metadata", async ({ page }) => {
+  const manifest = await page.evaluate(async () => {
+    const response = await fetch("/manifest.webmanifest");
+    return {
+      ok: response.ok,
+      contentType: response.headers.get("content-type"),
+      body: await response.json(),
+    };
+  });
+
+  expect(manifest.ok).toBe(true);
+  expect(manifest.contentType).toContain("application/manifest+json");
+  expect(manifest.body.name).toContain("Pakettitutka");
+  expect(manifest.body.short_name).toBe("Pakettitutka");
+  expect(manifest.body.start_url).toBe("/");
+});
+
+test("keeps key controls at least 44px tall for touch use", async ({ page }) => {
+  const selectors = [
+    '[data-test-id="comparePrices"]',
+    '.audience-switch .segment',
+    '.route-switch .route-option',
+    '.preset-row .preset-button',
+    '.site-nav a',
+    '.directory-filter',
+  ];
+
+  for (const selector of selectors) {
+    const elements = page.locator(selector);
+    const count = await elements.count();
+    expect(count).toBeGreaterThan(0);
+
+    for (let index = 0; index < count; index += 1) {
+      const box = await elements.nth(index).boundingBox();
+      expect(box, `${selector} should be visible`).not.toBeNull();
+      expect(box?.height ?? 0, `${selector} should be at least 44px tall`).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
