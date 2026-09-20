@@ -12,10 +12,10 @@ async function defaultClipboardWriter(text: string): Promise<void> {
 }
 
 async function withTimeout(operation: Promise<void>): Promise<void> {
-  let timeoutId: number | undefined;
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
 
   const timeout = new Promise<never>((_, reject) => {
-    timeoutId = window.setTimeout(
+    timeoutId = globalThis.setTimeout(
       () => reject(new Error("Clipboard write timed out")),
       CLIPBOARD_TIMEOUT_MS,
     );
@@ -24,7 +24,7 @@ async function withTimeout(operation: Promise<void>): Promise<void> {
   try {
     await Promise.race([operation, timeout]);
   } finally {
-    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    if (timeoutId !== undefined) globalThis.clearTimeout(timeoutId);
   }
 }
 
