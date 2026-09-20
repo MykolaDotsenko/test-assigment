@@ -1,9 +1,9 @@
 {
-  "name": "radius-delivery-quote-lab",
+  "name": "radius-finland-courier-comparator",
   "private": true,
-  "version": "1.0.0",
+  "version": "3.0.0",
   "type": "module",
-  "description": "Radius — a transparent delivery quote lab with validated provider data, deterministic pricing and accessible UX.",
+  "description": "Radius Finland — a tariff-backed parcel and courier price engine for Finnish shipments.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
