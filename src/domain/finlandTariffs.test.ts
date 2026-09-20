@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateQuotes,
-  isFinnishPostalCode,
   parsePositiveNumber,
   POSTNORD_FUEL_SURCHARGE,
   VAT_RATE,
@@ -9,8 +8,7 @@ import {
 } from "./finlandTariffs";
 
 const base: ParcelInput = {
-  fromPostalCode: "20100",
-  toPostalCode: "00100",
+  route: "mainland",
   weightKg: 1,
   lengthCm: 20,
   widthCm: 15,
@@ -21,9 +19,7 @@ const base: ParcelInput = {
 };
 
 describe("input parsing", () => {
-  it("accepts Finnish postal-code shape and decimal commas", () => {
-    expect(isFinnishPostalCode("20100")).toBe(true);
-    expect(isFinnishPostalCode("2010")).toBe(false);
+  it("accepts decimal commas for parcel measurements", () => {
     expect(parsePositiveNumber("1,25")).toBe(1.25);
   });
 });
@@ -61,7 +57,7 @@ describe("consumer quotes", () => {
   });
 
   it("uses Posti's Åland table instead of mainland pricing", () => {
-    const quotes = calculateQuotes({ ...base, toPostalCode: "22100" });
+    const quotes = calculateQuotes({ ...base, route: "aland" });
     const posti = quotes.find((quote) => quote.provider === "Posti");
     expect(posti?.priceCents).toBe(1490);
     expect(quotes.some((quote) => quote.provider === "GLS Finland")).toBe(false);
@@ -92,6 +88,21 @@ describe("PostNord contract pricing", () => {
     const quote = calculateQuotes(input).find((item) => item.id === "postnord-service-point");
     expect(quote).toBeDefined();
     expect(quote?.details.join(" ")).toContain("16.80 kg");
+  });
+
+  it("excludes additional-service fees from the fuel-surcharge base", () => {
+    const quote = calculateQuotes({
+      ...base,
+      audience: "business",
+      weightKg: 5,
+      lengthCm: 130,
+      widthCm: 20,
+      heightCm: 10,
+    }).find((item) => item.id === "postnord-service-point");
+
+    expect(quote?.priceCents).toBe(1378);
+    expect(quote?.details.join(" ")).toContain("10.4% of freight (€0.60)");
+    expect(quote?.details.join(" ")).toContain("Special handling: +€4.60");
   });
 
   it("adds the published September fuel surcharge and Finnish VAT", () => {

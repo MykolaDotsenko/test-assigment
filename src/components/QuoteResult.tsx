@@ -8,19 +8,28 @@ function badge(accuracy: Quote["accuracy"]) {
 }
 
 export default function QuoteResult({ input, quotes }: { input: ParcelInput; quotes: Quote[] }) {
+  const secondPrice = quotes[1]?.priceCents ?? null;
+  const bestPrice = quotes[0]?.priceCents ?? null;
+  const savingsCents =
+    bestPrice !== null && secondPrice !== null && secondPrice > bestPrice
+      ? secondPrice - bestPrice
+      : null;
+  const routeLabel = input.route === "aland" ? "Mainland Finland ↔ Åland" : "Mainland Finland";
+
   return (
     <section className="results-section" data-test-id="results" aria-live="polite" aria-labelledby="results-title">
       <div className="results-heading">
         <div>
           <span className="eyebrow">Comparison</span>
           <h2 id="results-title">{quotes.length} calculable option{quotes.length === 1 ? "" : "s"}</h2>
-          <p>{input.weightKg} kg · {input.lengthCm} × {input.widthCm} × {input.heightCm} cm · {input.fromPostalCode} → {input.toPostalCode}</p>
+          <p>{input.weightKg} kg · {input.lengthCm} × {input.widthCm} × {input.heightCm} cm · {routeLabel}</p>
         </div>
         {quotes[0]?.priceCents !== null && quotes[0] && (
           <div className="best-price">
             <small>Lowest calculated</small>
             <strong data-test-id="bestPrice">{formatPrice(quotes[0].priceCents)}</strong>
             <span>{quotes[0].provider}</span>
+            {savingsCents !== null && <small className="savings-note">{formatPrice(savingsCents)} below the next calculated option</small>}
           </div>
         )}
       </div>

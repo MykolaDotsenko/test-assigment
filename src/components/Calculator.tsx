@@ -3,16 +3,15 @@ import QuoteResult from "./QuoteResult";
 import ProviderDirectory from "./ProviderDirectory";
 import {
   calculateQuotes,
-  isFinnishPostalCode,
   parsePositiveNumber,
   TARIFF_SNAPSHOT_DATE,
   type Audience,
   type ParcelInput,
+  type RouteScope,
 } from "../domain/finlandTariffs";
 
 interface FormState {
-  fromPostalCode: string;
-  toPostalCode: string;
+  route: RouteScope;
   weightKg: string;
   lengthCm: string;
   widthCm: string;
@@ -23,8 +22,7 @@ interface FormState {
 }
 
 const DEFAULT_FORM: FormState = {
-  fromPostalCode: "20100",
-  toPostalCode: "00100",
+  route: "mainland",
   weightKg: "1",
   lengthCm: "20",
   widthCm: "15",
@@ -33,6 +31,12 @@ const DEFAULT_FORM: FormState = {
   glsPickup: false,
   glsHomeDelivery: false,
 };
+
+const PARCEL_PRESETS = [
+  { label: "Small", hint: "20 × 15 × 5 cm · 1 kg", weightKg: "1", lengthCm: "20", widthCm: "15", heightCm: "5" },
+  { label: "Medium", hint: "40 × 30 × 20 cm · 3 kg", weightKg: "3", lengthCm: "40", widthCm: "30", heightCm: "20" },
+  { label: "Large", hint: "60 × 40 × 35 cm · 8 kg", weightKg: "8", lengthCm: "60", widthCm: "40", heightCm: "35" },
+] as const;
 
 type Errors = Partial<Record<keyof FormState, string>>;
 
@@ -49,12 +53,21 @@ export default function Calculator() {
     setSubmitted(null);
   };
 
+  const applyPreset = (preset: (typeof PARCEL_PRESETS)[number]) => {
+    setForm((current) => ({
+      ...current,
+      weightKg: preset.weightKg,
+      lengthCm: preset.lengthCm,
+      widthCm: preset.widthCm,
+      heightCm: preset.heightCm,
+    }));
+    setErrors({});
+    setSubmitted(null);
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: Errors = {};
-
-    if (!isFinnishPostalCode(form.fromPostalCode)) nextErrors.fromPostalCode = "Use a 5-digit Finnish postal code.";
-    if (!isFinnishPostalCode(form.toPostalCode)) nextErrors.toPostalCode = "Use a 5-digit Finnish postal code.";
 
     const weightKg = parsePositiveNumber(form.weightKg);
     const lengthCm = parsePositiveNumber(form.lengthCm);
@@ -70,8 +83,7 @@ export default function Calculator() {
     if (Object.keys(nextErrors).length > 0 || !weightKg || !lengthCm || !widthCm || !heightCm) return;
 
     setSubmitted({
-      fromPostalCode: form.fromPostalCode.trim(),
-      toPostalCode: form.toPostalCode.trim(),
+      route: form.route,
       weightKg,
       lengthCm,
       widthCm,
@@ -103,7 +115,7 @@ export default function Calculator() {
           <span className="eyebrow">Pakettitutka · Finnish parcel intelligence</span>
           <h1 id="hero-title">Compare parcel prices across Finland without guessing.</h1>
           <p>
-            Enter two postal codes, weight and dimensions. Pakettitutka applies verified Finnish carrier
+            Choose the route and tell us the parcel size. Pakettitutka applies verified Finnish carrier
             rules and labels every result by pricing confidence: public tariff, contract list rate,
             live quote, or inactive service.
           </p>
@@ -112,9 +124,9 @@ export default function Calculator() {
             <a className="hero-secondary" href="#method">See the pricing method</a>
           </div>
           <div className="trust-row" aria-label="Pricing trust signals">
+            <span>No GPS or street address</span>
+            <span>No sign-up</span>
             <span>Official tariff sources</span>
-            <span>Dimensions + volumetric weight</span>
-            <span>Fuel + VAT where published</span>
             <span>Snapshot {TARIFF_SNAPSHOT_DATE}</span>
           </div>
         </div>
@@ -146,36 +158,71 @@ export default function Calculator() {
           </div>
 
           <form onSubmit={submit} noValidate>
-            <div className="audience-switch" role="group" aria-label="Pricing audience">
-              <button
-                type="button"
-                className={form.audience === "consumer" ? "segment active" : "segment"}
-                onClick={() => update("audience", "consumer")}
-                aria-pressed={form.audience === "consumer"}
-              >
-                Private sender
-              </button>
-              <button
-                type="button"
-                className={form.audience === "business" ? "segment active" : "segment"}
-                onClick={() => update("audience", "business")}
-                aria-pressed={form.audience === "business"}
-              >
-                Business / list rates
-              </button>
+            <div>
+              <span className="control-label">Pricing mode</span>
+              <div className="audience-switch" role="group" aria-label="Pricing mode">
+                <button
+                  type="button"
+                  className={form.audience === "consumer" ? "segment active" : "segment"}
+                  onClick={() => update("audience", "consumer")}
+                  aria-pressed={form.audience === "consumer"}
+                >
+                  Public / no-contract
+                </button>
+                <button
+                  type="button"
+                  className={form.audience === "business" ? "segment active" : "segment"}
+                  onClick={() => update("audience", "business")}
+                  aria-pressed={form.audience === "business"}
+                >
+                  Business contract rates
+                </button>
+              </div>
+              <p className="field-help">
+                Public mode covers private senders and no-contract services. Contract mode currently calculates published PostNord list rates.
+              </p>
             </div>
 
-            <div className="postal-grid">
-              <label className="field-group">
-                <span>From postal code</span>
-                <input data-test-id="fromPostalCode" inputMode="numeric" autoComplete="postal-code" maxLength={5} value={form.fromPostalCode} onChange={(e) => update("fromPostalCode", e.target.value)} aria-invalid={Boolean(errors.fromPostalCode)} />
-                {errors.fromPostalCode && <small className="field-error">{errors.fromPostalCode}</small>}
-              </label>
-              <label className="field-group">
-                <span>To postal code</span>
-                <input data-test-id="toPostalCode" inputMode="numeric" autoComplete="postal-code" maxLength={5} value={form.toPostalCode} onChange={(e) => update("toPostalCode", e.target.value)} aria-invalid={Boolean(errors.toPostalCode)} />
-                {errors.toPostalCode && <small className="field-error">{errors.toPostalCode}</small>}
-              </label>
+            <div>
+              <span className="control-label">Route</span>
+              <div className="route-switch" role="group" aria-label="Shipment route">
+                <button
+                  type="button"
+                  className={form.route === "mainland" ? "route-option active" : "route-option"}
+                  onClick={() => update("route", "mainland")}
+                  aria-pressed={form.route === "mainland"}
+                >
+                  <strong>Mainland Finland</strong>
+                  <small>No exact postcode needed</small>
+                </button>
+                <button
+                  type="button"
+                  className={form.route === "aland" ? "route-option active" : "route-option"}
+                  onClick={() => update("route", "aland")}
+                  aria-pressed={form.route === "aland"}
+                >
+                  <strong>To / from Åland</strong>
+                  <small>Special tariffs may apply</small>
+                </button>
+              </div>
+              <p className="field-help">
+                We only ask for location detail that changes a modeled tariff. No GPS, street address or precise destination is stored.
+              </p>
+            </div>
+
+            <div className="preset-block">
+              <div className="preset-heading">
+                <span className="control-label">Quick examples</span>
+                <small>Start fast, then adjust the outer measurements.</small>
+              </div>
+              <div className="preset-row">
+                {PARCEL_PRESETS.map((preset) => (
+                  <button className="preset-button" type="button" key={preset.label} onClick={() => applyPreset(preset)}>
+                    <strong>{preset.label}</strong>
+                    <span>{preset.hint}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="parcel-grid">
@@ -200,11 +247,12 @@ export default function Calculator() {
                 {errors.heightCm && <small className="field-error">{errors.heightCm}</small>}
               </label>
             </div>
+            <p className="field-help field-help--compact">Measure the package from the outside. Pakettitutka automatically tests allowed box rotations.</p>
 
             <details className="provider-options">
               <summary>
                 <span>GLS options</span>
-                <small>Only affect GLSparcel.fi quote</small>
+                <small>Only affect the public GLSparcel.fi quote</small>
               </summary>
               <label className="check-row">
                 <input type="checkbox" checked={form.glsPickup} onChange={(e) => update("glsPickup", e.target.checked)} />
