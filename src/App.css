@@ -669,3 +669,116 @@
     border: 1px solid CanvasText;
   }
 }
+
+
+.control-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #3d4c45;
+  font-size: .8rem;
+  font-weight: 850;
+}
+
+.field-help {
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.field-help--compact { margin-top: -10px; }
+
+.route-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.route-option {
+  min-height: 68px;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  text-align: left;
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(255,255,255,.72);
+  color: var(--ink);
+}
+
+.route-option small { color: var(--muted); font-size: .7rem; }
+.route-option.active {
+  border-color: rgba(28,117,84,.4);
+  background: #eef8f2;
+  box-shadow: inset 0 0 0 1px rgba(28,117,84,.12);
+}
+
+.preset-block { display: grid; gap: 9px; }
+.preset-heading { display: flex; justify-content: space-between; gap: 12px; align-items: end; }
+.preset-heading .control-label { margin: 0; }
+.preset-heading small { color: var(--muted); font-size: .7rem; }
+.preset-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+
+.preset-button {
+  min-height: 58px;
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  text-align: left;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,.72);
+  color: var(--ink);
+}
+
+.preset-button:hover,
+.preset-button:focus-visible {
+  border-color: rgba(28,117,84,.35);
+  background: #f7fbf8;
+}
+
+.preset-button span { color: var(--muted); font-size: .68rem; }
+.savings-note { margin-top: 3px; color: var(--accent-strong) !important; font-weight: 750; }
+
+@media (max-width: 470px) {
+  .route-switch,
+  .preset-row { grid-template-columns: 1fr; }
+  .preset-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+}
+
+
+.calculator-column {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+  align-self: start;
+}
+
+.calculator-column .results-section {
+  margin-top: 0;
+}
+
+
+.coverage-note {
+  display: grid;
+  gap: 5px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid rgba(28,117,84,.14);
+  border-radius: 16px;
+  background: rgba(238,248,242,.78);
+}
+
+.coverage-note strong {
+  color: var(--accent-strong);
+  font-size: .78rem;
+}
+
+.coverage-note p {
+  margin: 0;
+  color: #536159;
+  font-size: .76rem;
+  line-height: 1.55;
+}

@@ -26,7 +26,9 @@ Pakettitutka therefore models each carrier separately and exposes an **accuracy 
 - branded, responsive comparison flow designed for desktop and mobile;
 - transparent pricing confidence instead of a misleading single “estimate”;
 - official tariff links embedded directly in results and carrier cards;
-- separate consumer and business/list-rate modes;
+- separate public/no-contract and business-contract pricing modes;
+- no GPS, street address, exact destination or account required for the modeled tariffs;
+- mainland-vs-Åland route selection asks only for location detail that changes a price;
 - accessible controls, focus states and reduced-motion support;
 - Finland-first visual system with a dedicated Pakettitutka asset library.
 
@@ -47,7 +49,7 @@ Official online/OmaPosti domestic prices from 2 June 2026:
 | XL | 40 × 60 × 100 cm | €22.90 |
 | XXL | longest side ≤ 200 cm, length + circumference ≤ 300 cm | €44.90 |
 
-Maximum weight for S–XXL is 25 kg. Pakettitutka also applies Posti's separate Åland tariff when a 22xxx postal code is involved.
+Maximum weight for S–XXL is 25 kg. Pakettitutka applies Posti's separate Åland tariff when the user selects a mainland ↔ Åland route; no exact postal code is required.
 
 Source: https://www.posti.fi/en/sending/parcels/package-price-lists
 
@@ -61,7 +63,7 @@ Current prices that the official public domestic page exposes directly:
 | S | 10 × 40 × 55 cm | €8.80 |
 | M | 20 × 40 × 55 cm | €11.80 |
 
-Matkahuolto also offers larger sizes. Pakettitutka deliberately does **not** fill missing current consumer prices from old price lists.
+Matkahuolto also offers larger sizes. Pakettitutka deliberately does **not** fill missing current consumer prices from old price lists. For Åland, Matkahuolto uses its international-parcel flow plus a ferry surcharge; Pakettitutka surfaces this as non-calculated coverage rather than inventing a flat total.
 
 Source: https://www.matkahuolto.fi/packages/domestic-parcels
 
@@ -88,10 +90,10 @@ Pricing basis:
 ```text
 volumetric weight = volume m³ × 280 kg
 chargeable weight = max(actual weight, volumetric weight)
-base rate          = official weight band
+base freight       = official weight band
++ 10.4% fuel surcharge on freight only (effective 1 Sep 2026)
 + special handling if triggered
-+ 10.4% fuel surcharge (effective 1 Sep 2026)
-+ 25.5% Finnish VAT
++ 25.5% Finnish VAT on the taxable subtotal
 ```
 
 These are list-rate calculations, not negotiated contract prices.
@@ -117,10 +119,13 @@ The UI links directly to official carrier sources.
 
 - fixed-size boxes are rotation-aware;
 - girth-based services use longest side + circumference;
+- the UI asks only for mainland-vs-Åland routing because exact postcodes do not change the currently automated tariff formulas;
 - Åland is treated separately where the official tariff differs;
 - no price is invented when an official current tariff is unavailable;
-- business and consumer prices are never silently mixed;
-- final carrier checkout/invoice remains authoritative.
+- public/no-contract and business-contract prices are never silently mixed;
+- PostNord fuel surcharge is applied to freight only, excluding additional-service fees;
+- final carrier checkout/invoice remains authoritative;
+- unsupported dynamic/account pricing is explained explicitly instead of being approximated.
 
 ## Stack
 

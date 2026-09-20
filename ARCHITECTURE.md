@@ -6,7 +6,8 @@ Pakettitutka is a carrier-specific tariff engine. It intentionally does not shar
 
 ```text
 shipment inputs
-  ├─ Finnish postal-code validation
+  ├─ route scope: mainland or Åland
+  ├─ pricing mode: public/no-contract or business contract
   ├─ actual weight
   └─ dimensions
         ↓
@@ -36,7 +37,7 @@ This is a core domain distinction, not just a UI badge.
 
 ### Posti
 
-Rotation-aware size matching selects the smallest eligible XXS–XL product. XXL uses the official longest-side and length-plus-girth constraint. Åland postal codes (22xxx) switch to the separate Posti Åland price table.
+Rotation-aware size matching selects the smallest eligible XXS–XL product. XXL uses the official longest-side and length-plus-girth constraint. Selecting the Åland route switches to the separate Posti Åland price table without collecting an exact postal code.
 
 ### Matkahuolto
 
@@ -54,8 +55,8 @@ PostNord contract list pricing uses:
 volume m³ × 280 kg
 max(actual, volumetric)
 → published weight band
+→ current parcel fuel surcharge on freight only
 → possible special handling
-→ current parcel fuel surcharge
 → Finnish VAT
 ```
 
@@ -68,18 +69,20 @@ Tariffs are versioned in source with explicit effective/check dates. Dynamic pro
 ## Quality strategy
 
 Unit tests cover:
-- Finnish postal codes;
+- route scope and Åland pricing;
 - decimal input;
 - rotation-aware box matching;
 - Posti Åland tariff;
 - GLS mandatory home delivery;
 - PostNord volumetric weight;
-- PostNord fuel + VAT pipeline.
+- PostNord fuel + VAT pipeline;
+- exclusion of additional-service fees from the fuel-surcharge base.
 
 Browser tests cover:
 - consumer comparison;
 - business/list-rate mode;
 - stale result invalidation on input edit;
 - validation;
+- Åland route without postcode/GPS;
 - accessibility;
 - mobile overflow.

@@ -1,9 +1,9 @@
 export type Audience = "consumer" | "business";
+export type RouteScope = "mainland" | "aland";
 export type Accuracy = "exact-public" | "exact-list" | "live-quote" | "inactive";
 
 export interface ParcelInput {
-  fromPostalCode: string;
-  toPostalCode: string;
+  route: RouteScope;
   weightKg: number;
   lengthCm: number;
   widthCm: number;
@@ -132,12 +132,8 @@ function longestAndGirth(input: ParcelInput): { longest: number; lengthPlusGirth
   };
 }
 
-function isAland(postalCode: string): boolean {
-  return /^22\d{3}$/.test(postalCode);
-}
-
 function quotePosti(input: ParcelInput): Quote | null {
-  const aland = isAland(input.fromPostalCode) || isAland(input.toPostalCode);
+  const aland = input.route === "aland";
 
   for (const box of POSTI_BOXES) {
     if (!fitsRotatableBox(input, box)) continue;
@@ -196,7 +192,7 @@ function quotePosti(input: ParcelInput): Quote | null {
 }
 
 function quoteMatkahuolto(input: ParcelInput): Quote | null {
-  if (isAland(input.fromPostalCode) || isAland(input.toPostalCode)) return null;
+  if (input.route === "aland") return null;
 
   for (const box of MATKAHUOLTO_PUBLIC_BOXES) {
     if (!fitsRotatableBox(input, box)) continue;
@@ -225,7 +221,7 @@ function quoteMatkahuolto(input: ParcelInput): Quote | null {
 }
 
 function quoteGls(input: ParcelInput): Quote | null {
-  if (isAland(input.fromPostalCode) || isAland(input.toPostalCode)) return null;
+  if (input.route === "aland") return null;
   const { longest, lengthPlusGirth } = longestAndGirth(input);
   const dimensions = [input.lengthCm, input.widthCm, input.heightCm].sort((a, b) => b - a);
   const [, second, third] = dimensions;
@@ -283,16 +279,24 @@ function bandPrice(weight: number, bands: WeightBand[]): number | null {
   return bands.find((band) => weight <= band.maxKg)?.cents ?? null;
 }
 
-function grossPostNordPrice(baseCents: number): {
+function grossPostNordPrice(baseCents: number, additionalServiceCents = 0): {
   baseCents: number;
+  additionalServiceCents: number;
   fuelCents: number;
   vatCents: number;
   totalCents: number;
 } {
+  // PostNord defines fuel surcharge as a percentage of freight, excluding additional services.
   const fuelCents = Math.round(baseCents * POSTNORD_FUEL_SURCHARGE);
-  const taxable = baseCents + fuelCents;
+  const taxable = baseCents + additionalServiceCents + fuelCents;
   const vatCents = Math.round(taxable * VAT_RATE);
-  return { baseCents, fuelCents, vatCents, totalCents: taxable + vatCents };
+  return {
+    baseCents,
+    additionalServiceCents,
+    fuelCents,
+    vatCents,
+    totalCents: taxable + vatCents,
+  };
 }
 
 function quotePostNord(
@@ -300,7 +304,7 @@ function quotePostNord(
   service: "locker" | "service-point",
 ): Quote | null {
   if (input.audience !== "business") return null;
-  if (isAland(input.fromPostalCode) || isAland(input.toPostalCode)) return null;
+  if (input.route === "aland") return null;
   if (input.weightKg < 0.15) return null;
 
   const { longest, lengthPlusGirth } = longestAndGirth(input);
@@ -325,7 +329,7 @@ function quotePostNord(
   const specialHandling =
     longest > 120 || [input.lengthCm, input.widthCm, input.heightCm].filter((v) => v > 60).length >= 2;
   const specialHandlingCents = specialHandling ? 460 : 0;
-  const priced = grossPostNordPrice(baseCents + specialHandlingCents);
+  const priced = grossPostNordPrice(baseCents, specialHandlingCents);
 
   return {
     id: `postnord-${service}`,
@@ -347,10 +351,10 @@ function quotePostNord(
       `Actual weight: ${input.weightKg.toFixed(2)} kg`,
       `Volumetric weight: ${((input.lengthCm * input.widthCm * input.heightCm) / 1_000_000 * 280).toFixed(2)} kg`,
       `Chargeable weight: ${chargeableWeight.toFixed(2)} kg`,
-      `Base + eligible handling: €${((baseCents + specialHandlingCents) / 100).toFixed(2)} excl. VAT`,
-      `Fuel surcharge: 10.4% (€${(priced.fuelCents / 100).toFixed(2)})`,
+      `Base freight: €${(baseCents / 100).toFixed(2)} excl. VAT`,
+      specialHandling ? "Special handling: +€4.60 excl. VAT" : "No special-handling fee triggered",
+      `Fuel surcharge: 10.4% of freight (€${(priced.fuelCents / 100).toFixed(2)})`,
       `VAT 25.5%: €${(priced.vatCents / 100).toFixed(2)}`,
-      specialHandling ? "Special handling +€4.60 excl. VAT included" : "No special-handling fee triggered",
     ],
   };
 }
@@ -477,6 +481,3 @@ export function parsePositiveNumber(raw: string): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
-export function isFinnishPostalCode(raw: string): boolean {
-  return /^\d{5}$/.test(raw.trim());
-}

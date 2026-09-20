@@ -6,8 +6,6 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("compares consumer tariffs and ranks the cheapest calculable option", async ({ page }) => {
-  await page.locator('[data-test-id="fromPostalCode"]').fill("20100");
-  await page.locator('[data-test-id="toPostalCode"]').fill("00100");
   await page.locator('[data-test-id="weightKg"]').fill("1");
   await page.locator('[data-test-id="lengthCm"]').fill("20");
   await page.locator('[data-test-id="widthCm"]').fill("15");
@@ -20,14 +18,16 @@ test("compares consumer tariffs and ranks the cheapest calculable option", async
 });
 
 test("business mode exposes PostNord list-rate calculations", async ({ page }) => {
-  await page.getByRole("button", { name: "Business / list rates" }).click();
+  await page.getByRole("button", { name: "Business contract rates" }).click();
   await page.locator('[data-test-id="comparePrices"]').click();
 
-  await expect(page.getByText("PostNord").first()).toBeVisible();
-  await expect(page.getByText("Contract list calculation").first()).toBeVisible();
-  await expect(page.getByText("Matkahuolto").first()).toHaveCount(0);
-  await expect(page.getByText("GLS Finland").first()).toHaveCount(0);
-  await expect(page.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
+  const results = page.locator('[data-test-id="results"]');
+  await expect(results.getByText("PostNord").first()).toBeVisible();
+  await expect(results.getByText("Contract list calculation").first()).toBeVisible();
+  await expect(results.getByText("Matkahuolto")).toHaveCount(0);
+  await expect(results.getByText("GLS Finland")).toHaveCount(0);
+  await results.getByText("Calculation details").first().click();
+  await expect(results.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
 });
 
 test("editing an input invalidates the visible comparison", async ({ page }) => {
@@ -39,12 +39,22 @@ test("editing an input invalidates the visible comparison", async ({ page }) => 
   await expect(page.getByText("Comparison", { exact: true })).toHaveCount(0);
 });
 
-test("rejects invalid postal codes before calculating", async ({ page }) => {
-  await page.locator('[data-test-id="fromPostalCode"]').fill("2010");
+test("rejects invalid parcel measurements before calculating", async ({ page }) => {
+  await page.locator('[data-test-id="weightKg"]').fill("0");
   await page.locator('[data-test-id="comparePrices"]').click();
 
-  await expect(page.getByText("Use a 5-digit Finnish postal code.")).toBeVisible();
+  await expect(page.getByText("Enter a positive weight.")).toBeVisible();
   await expect(page.getByText("Comparison", { exact: true })).toHaveCount(0);
+});
+
+test("supports Åland route without asking for a postcode or GPS", async ({ page }) => {
+  await page.getByRole("button", { name: /To \/ from Åland/ }).click();
+  await page.locator('[data-test-id="comparePrices"]').click();
+
+  const results = page.locator('[data-test-id="results"]');
+  await expect(results.getByText("Mainland Finland ↔ Åland")).toBeVisible();
+  await results.getByText("Calculation details").first().click();
+  await expect(results.getByText("Åland tariff applied")).toBeVisible();
 });
 
 test("has no serious or critical WCAG A/AA violations", async ({ page }) => {
