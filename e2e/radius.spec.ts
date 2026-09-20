@@ -90,3 +90,18 @@ test("filters the carrier directory by pricing availability", async ({ page }) =
   await expect(directory.getByText("Posti", { exact: true })).toHaveCount(0);
   await expect(directory.getByText(/8 carriers shown/)).toBeVisible();
 });
+
+
+test("clears hidden GLS modifiers when pricing context changes", async ({ page }) => {
+  await page.getByText("GLS options").click();
+  const pickup = page.getByRole("checkbox", { name: /Pickup from sender/ });
+  await pickup.check();
+  await expect(pickup).toBeChecked();
+
+  await page.getByRole("button", { name: "Business list rates" }).click();
+  await page.getByRole("button", { name: "Public / no-contract" }).click();
+  await page.getByText("GLS options").click();
+
+  await expect(page.getByRole("checkbox", { name: /Pickup from sender/ })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Deliver to recipient/ })).not.toBeChecked();
+});

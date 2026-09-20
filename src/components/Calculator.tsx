@@ -48,7 +48,16 @@ export default function Calculator() {
   const quotes = useMemo(() => (submitted ? calculateQuotes(submitted) : []), [submitted]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((current) => ({ ...current, [key]: value }));
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+
+      if (next.audience !== "consumer" || next.route !== "mainland") {
+        next.glsPickup = false;
+        next.glsHomeDelivery = false;
+      }
+
+      return next;
+    });
     setErrors((current) => ({ ...current, [key]: undefined }));
     setSubmitted(null);
   };
