@@ -25,13 +25,12 @@ const DYNAMIC_PAYLOAD = {
   },
 };
 
+const STATIC_ROUTE = "**/home-assignment-api/v1/venues/**/static";
+const DYNAMIC_ROUTE = "**/home-assignment-api/v1/venues/**/dynamic";
+
 async function mockVenueApi(page: Page) {
-  await page.route("**/home-assignment-api/v1/venues/**/static", (route) =>
-    route.fulfill({ json: STATIC_PAYLOAD }),
-  );
-  await page.route("**/home-assignment-api/v1/venues/**/dynamic", (route) =>
-    route.fulfill({ json: DYNAMIC_PAYLOAD }),
-  );
+  await page.route(STATIC_ROUTE, (route) => route.fulfill({ json: STATIC_PAYLOAD }));
+  await page.route(DYNAMIC_ROUTE, (route) => route.fulfill({ json: DYNAMIC_PAYLOAD }));
 }
 
 test.beforeEach(async ({ page }) => {
@@ -52,6 +51,16 @@ test("calculates and explains an available delivery quote", async ({ page }) => 
   await expect(page.getByText(/Add .*2\.00.* to the cart/)).toBeVisible();
 });
 
+test("invalidates a visible quote as soon as a pricing input changes", async ({ page }) => {
+  await page.locator('[data-test-id="calculateDeliveryPrice"]').click();
+  await expect(page.getByText("Delivery available")).toBeVisible();
+
+  await page.locator('[data-test-id="cartValue"]').fill("19.00");
+
+  await expect(page.getByText("Delivery available")).toHaveCount(0);
+  await expect(page.getByText("Price anatomy")).toHaveCount(0);
+});
+
 test("keeps a valid quote distinct from outside-delivery-area state", async ({ page }) => {
   await page.locator('[data-test-id="cartValue"]').fill("20.00");
   await page.locator('[data-test-id="userLatitude"]').fill("60.19094");
@@ -63,6 +72,16 @@ test("keeps a valid quote distinct from outside-delivery-area state", async ({ p
   await expect(page.getByText("Try a closer location.")).toBeVisible();
 });
 
+test("surfaces provider HTTP failure as a bounded product error", async ({ page }) => {
+  await page.unroute(DYNAMIC_ROUTE);
+  await page.route(DYNAMIC_ROUTE, (route) => route.fulfill({ status: 503, json: {} }));
+
+  await page.locator('[data-test-id="calculateDeliveryPrice"]').click();
+
+  await expect(page.getByRole("alert")).toContainText("Venue service returned HTTP 503.");
+  await expect(page.getByText("Delivery available")).toHaveCount(0);
+});
+
 test("rejects over-precise money before calling the provider", async ({ page }) => {
   let providerCalls = 0;
   page.on("request", (request) => {
@@ -72,7 +91,9 @@ test("rejects over-precise money before calling the provider", async ({ page }) 
   await page.locator('[data-test-id="cartValue"]').fill("12.345");
   await page.locator('[data-test-id="calculateDeliveryPrice"]').click();
 
-  await expect(page.getByText("Enter a non-negative EUR amount with at most two decimals.")).toBeVisible();
+  await expect(
+    page.getByText("Enter a non-negative EUR amount with at most two decimals."),
+  ).toBeVisible();
   expect(providerCalls).toBe(0);
 });
 

@@ -47,7 +47,34 @@ function parseDistanceRange(value: unknown): DistanceRange {
     throw new VenueDataError("Delivery pricing contains a negative range value.");
   }
 
+  if (parsed.max !== 0 && parsed.max <= parsed.min) {
+    throw new VenueDataError("Delivery pricing contains an invalid finite distance range.");
+  }
+
   return parsed;
+}
+
+function validateDistanceRanges(ranges: DistanceRange[]): void {
+  let previousFiniteMax: number | null = null;
+
+  ranges.forEach((range, index) => {
+    if (index > 0 && range.min < ranges[index - 1].min) {
+      throw new VenueDataError("Delivery distance ranges are not ordered by minimum distance.");
+    }
+
+    if (previousFiniteMax !== null && range.min < previousFiniteMax) {
+      throw new VenueDataError("Delivery distance ranges overlap.");
+    }
+
+    if (range.max === 0) {
+      if (index !== ranges.length - 1) {
+        throw new VenueDataError("The open-ended delivery range must be the final range.");
+      }
+      return;
+    }
+
+    previousFiniteMax = range.max;
+  });
 }
 
 export function parseVenueProfile(
@@ -82,6 +109,8 @@ export function parseVenueProfile(
   if (distanceRanges.length === 0) {
     throw new VenueDataError("Venue does not expose delivery distance ranges.");
   }
+
+  validateDistanceRanges(distanceRanges);
 
   const orderMinimumNoSurcharge = asNumber(
     deliverySpecs.order_minimum_no_surcharge,

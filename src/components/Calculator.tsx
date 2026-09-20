@@ -58,7 +58,10 @@ function validateForm(form: FormState): {
   return {
     errors,
     parsed:
-      Object.keys(errors).length === 0 && cartValueCents !== null && latitude !== null && longitude !== null
+      Object.keys(errors).length === 0 &&
+      cartValueCents !== null &&
+      latitude !== null &&
+      longitude !== null
         ? { cartValueCents, latitude, longitude }
         : null,
   };
@@ -80,15 +83,31 @@ export default function Calculator() {
     };
   }, []);
 
+  const invalidateVisibleQuote = () => {
+    setQuote(null);
+    setRequestError("");
+  };
+
   const setField = (field: keyof FormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
-    setRequestError("");
+    invalidateVisibleQuote();
   };
 
   const applyPreset = (latitude: string, longitude: string) => {
     setForm((current) => ({ ...current, latitude, longitude }));
     setFieldErrors((current) => ({ ...current, latitude: undefined, longitude: undefined }));
+    invalidateVisibleQuote();
+  };
+
+  const resetExample = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsLoading(false);
+    setForm(DEFAULT_FORM);
+    setFieldErrors({});
+    setRequestError("");
+    setQuote(null);
   };
 
   const handleLocation = () => {
@@ -107,6 +126,8 @@ export default function Calculator() {
           longitude: position.coords.longitude.toFixed(6),
         }));
         setFieldErrors((current) => ({ ...current, latitude: undefined, longitude: undefined }));
+        setQuote(null);
+        setRequestError("");
         setIsLocating(false);
       },
       () => {
@@ -128,6 +149,7 @@ export default function Calculator() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    setQuote(null);
     setIsLoading(true);
 
     try {
@@ -144,16 +166,18 @@ export default function Calculator() {
       );
 
       setQuote(nextQuote);
-      setRecentQuotes((current) => [
-        {
-          id: `${Date.now()}-${Math.round(distanceMeters)}`,
-          totalCents: nextQuote.totalCents,
-          distanceMeters: nextQuote.distanceMeters,
-          cartValueCents: nextQuote.cartValueCents,
-          available: nextQuote.available,
-        },
-        ...current,
-      ].slice(0, 4));
+      setRecentQuotes((current) =>
+        [
+          {
+            id: `${Date.now()}-${Math.round(distanceMeters)}`,
+            totalCents: nextQuote.totalCents,
+            distanceMeters: nextQuote.distanceMeters,
+            cartValueCents: nextQuote.cartValueCents,
+            available: nextQuote.available,
+          },
+          ...current,
+        ].slice(0, 4),
+      );
     } catch (error) {
       if (controller.signal.aborted) return;
       setQuote(null);
@@ -164,6 +188,7 @@ export default function Calculator() {
       );
     } finally {
       if (abortRef.current === controller) {
+        abortRef.current = null;
         setIsLoading(false);
       }
     }
@@ -197,7 +222,7 @@ export default function Calculator() {
               <span className="eyebrow">Build a quote</span>
               <h2 id="quote-builder-title">Delivery inputs</h2>
             </div>
-            <button type="button" className="text-button" onClick={() => setForm(DEFAULT_FORM)}>
+            <button type="button" className="text-button" onClick={resetExample}>
               Reset example
             </button>
           </div>
@@ -208,13 +233,19 @@ export default function Calculator() {
               <input
                 data-test-id="venueSlug"
                 value={form.venueSlug}
-                onChange={(event: ChangeEvent<HTMLInputElement>) => setField("venueSlug", event.target.value)}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setField("venueSlug", event.target.value)
+                }
                 aria-invalid={Boolean(fieldErrors.venueSlug)}
                 aria-describedby={fieldErrors.venueSlug ? "venueSlug-error" : undefined}
                 autoComplete="off"
                 spellCheck={false}
               />
-              {fieldErrors.venueSlug && <small id="venueSlug-error" className="field-error">{fieldErrors.venueSlug}</small>}
+              {fieldErrors.venueSlug && (
+                <small id="venueSlug-error" className="field-error">
+                  {fieldErrors.venueSlug}
+                </small>
+              )}
             </label>
 
             <label className="field-group">
@@ -225,13 +256,21 @@ export default function Calculator() {
                   data-test-id="cartValue"
                   inputMode="decimal"
                   value={form.cartValue}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => setField("cartValue", event.target.value)}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                    setField("cartValue", event.target.value)
+                  }
                   aria-invalid={Boolean(fieldErrors.cartValue)}
                   aria-describedby={fieldErrors.cartValue ? "cartValue-error" : "cartValue-help"}
                 />
               </div>
-              <small id="cartValue-help" className="field-help">Decimal comma or point both work.</small>
-              {fieldErrors.cartValue && <small id="cartValue-error" className="field-error">{fieldErrors.cartValue}</small>}
+              <small id="cartValue-help" className="field-help">
+                Decimal comma or point both work.
+              </small>
+              {fieldErrors.cartValue && (
+                <small id="cartValue-error" className="field-error">
+                  {fieldErrors.cartValue}
+                </small>
+              )}
             </label>
 
             <fieldset className="location-fieldset">
@@ -243,11 +282,17 @@ export default function Calculator() {
                     data-test-id="userLatitude"
                     inputMode="decimal"
                     value={form.latitude}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setField("latitude", event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setField("latitude", event.target.value)
+                    }
                     aria-invalid={Boolean(fieldErrors.latitude)}
                     aria-describedby={fieldErrors.latitude ? "latitude-error" : undefined}
                   />
-                  {fieldErrors.latitude && <small id="latitude-error" className="field-error">{fieldErrors.latitude}</small>}
+                  {fieldErrors.latitude && (
+                    <small id="latitude-error" className="field-error">
+                      {fieldErrors.latitude}
+                    </small>
+                  )}
                 </label>
                 <label className="field-group">
                   <span>Longitude</span>
@@ -255,11 +300,17 @@ export default function Calculator() {
                     data-test-id="userLongitude"
                     inputMode="decimal"
                     value={form.longitude}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setField("longitude", event.target.value)}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setField("longitude", event.target.value)
+                    }
                     aria-invalid={Boolean(fieldErrors.longitude)}
                     aria-describedby={fieldErrors.longitude ? "longitude-error" : undefined}
                   />
-                  {fieldErrors.longitude && <small id="longitude-error" className="field-error">{fieldErrors.longitude}</small>}
+                  {fieldErrors.longitude && (
+                    <small id="longitude-error" className="field-error">
+                      {fieldErrors.longitude}
+                    </small>
+                  )}
                 </label>
               </div>
 
@@ -311,13 +362,34 @@ export default function Calculator() {
           <span className="eyebrow">Pricing contract</span>
           <h2>Three inputs become one inspectable total.</h2>
           <div className="formula-stack">
-            <div><span>01</span><p><strong>Cart</strong><small>Your basket in integer cents.</small></p></div>
-            <div><span>02</span><p><strong>Distance</strong><small>Haversine distance from customer to venue.</small></p></div>
-            <div><span>03</span><p><strong>Venue rules</strong><small>Base fee, distance range and small-order threshold.</small></p></div>
+            <div>
+              <span>01</span>
+              <p>
+                <strong>Cart</strong>
+                <small>Your basket in integer cents.</small>
+              </p>
+            </div>
+            <div>
+              <span>02</span>
+              <p>
+                <strong>Distance</strong>
+                <small>Haversine distance from customer to venue.</small>
+              </p>
+            </div>
+            <div>
+              <span>03</span>
+              <p>
+                <strong>Venue rules</strong>
+                <small>Base fee, distance range and small-order threshold.</small>
+              </p>
+            </div>
           </div>
           <div className="architecture-note">
             <span>Boundary design</span>
-            <p>API payloads are validated before they enter the pricing domain. UI state never owns pricing rules.</p>
+            <p>
+              API payloads are validated before they enter the pricing domain. UI state never owns
+              pricing rules.
+            </p>
           </div>
         </aside>
       </div>
@@ -327,7 +399,9 @@ export default function Calculator() {
 
       <footer className="page-footer">
         <span>Radius</span>
-        <p>Home-assignment API data · client-side price calculation · precise coordinates are not stored.</p>
+        <p>
+          Home-assignment API data · client-side price calculation · precise coordinates are not stored.
+        </p>
       </footer>
     </main>
   );
