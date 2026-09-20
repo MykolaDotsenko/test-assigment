@@ -1,69 +1,111 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import QuoteResult from "./QuoteResult";
-import RecentQuotes, { type RecentQuote } from "./RecentQuotes";
 import {
-  calculateDeliveryQuote,
-  isVenueSlugValid,
-  parseCoordinate,
-  parseMoneyToCents,
-  type DeliveryQuote,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import QuoteResult from "./QuoteResult";
+import {
+  calculateDeliveryEstimate,
+  isCurrencyCodeValid,
+  parseCurrencyAmount,
+  parseRoadFactor,
+  type PricingModel,
+  type ServiceLevel,
 } from "../domain/delivery";
 import { calculateDistance } from "../domain/geo";
-import { fetchVenueProfile, VenueDataError } from "../services/venueApi";
+import {
+  GeocodingError,
+  searchPlaces,
+  type PlaceMatch,
+} from "../services/geocoder";
 
 interface FormState {
-  venueSlug: string;
-  cartValue: string;
-  latitude: string;
-  longitude: string;
+  fromQuery: string;
+  toQuery: string;
+  serviceLevel: ServiceLevel;
+  currency: string;
+  baseFee: string;
+  perKilometer: string;
+  minimumFee: string;
+  roadFactor: string;
 }
 
 type FieldErrors = Partial<Record<keyof FormState, string>>;
 
+interface ResolvedRoute {
+  pickupMatches: PlaceMatch[];
+  dropoffMatches: PlaceMatch[];
+  pickupIndex: number;
+  dropoffIndex: number;
+}
+
 const DEFAULT_FORM: FormState = {
-  venueSlug: "home-assignment-venue-helsinki",
-  cartValue: "18.50",
-  latitude: "60.17094",
-  longitude: "24.93087",
+  fromQuery: "",
+  toQuery: "",
+  serviceLevel: "standard",
+  currency: "EUR",
+  baseFee: "3.90",
+  perKilometer: "0.85",
+  minimumFee: "4.90",
+  roadFactor: "1.25",
 };
 
-const LOCATION_PRESETS = [
-  { name: "Central", latitude: "60.16990", longitude: "24.93840" },
-  { name: "Kamppi", latitude: "60.16860", longitude: "24.93050" },
-  { name: "Kallio", latitude: "60.18420", longitude: "24.95220" },
+const ROUTE_EXAMPLES = [
+  { label: "Turku → Helsinki", from: "Turku, Finland", to: "Helsinki Airport, Finland" },
+  { label: "Berlin → Potsdam", from: "Berlin, Germany", to: "Potsdam, Germany" },
+  { label: "Manhattan → JFK", from: "Manhattan, New York", to: "JFK Airport, New York" },
+  { label: "Tokyo → Haneda", from: "Tokyo Station, Japan", to: "Haneda Airport, Japan" },
 ];
 
-function validateForm(form: FormState): {
+function validateQuery(value: string): string | undefined {
+  const length = value.trim().length;
+  if (length < 2) return "Enter a place, address, landmark, city, or postal code.";
+  if (length > 160) return "Keep the place description under 160 characters.";
+  return undefined;
+}
+
+function buildPricingModel(form: FormState): {
+  model: PricingModel | null;
   errors: FieldErrors;
-  parsed: { cartValueCents: number; latitude: number; longitude: number } | null;
 } {
   const errors: FieldErrors = {};
-  const cartValueCents = parseMoneyToCents(form.cartValue);
-  const latitude = parseCoordinate(form.latitude, "latitude");
-  const longitude = parseCoordinate(form.longitude, "longitude");
+  const currency = form.currency.trim().toUpperCase();
 
-  if (!isVenueSlugValid(form.venueSlug)) {
-    errors.venueSlug = "Use a lowercase venue slug such as home-assignment-venue-helsinki.";
+  if (!isCurrencyCodeValid(currency)) {
+    errors.currency = "Use a valid 3-letter currency code, for example EUR, USD, GBP, or JPY.";
+    return { model: null, errors };
   }
-  if (cartValueCents === null) {
-    errors.cartValue = "Enter a non-negative EUR amount with at most two decimals.";
-  }
-  if (latitude === null) {
-    errors.latitude = "Latitude must be a number between -90 and 90.";
-  }
-  if (longitude === null) {
-    errors.longitude = "Longitude must be a number between -180 and 180.";
+
+  const baseFeeMinor = parseCurrencyAmount(form.baseFee, currency);
+  const perKilometerMinor = parseCurrencyAmount(form.perKilometer, currency);
+  const minimumFeeMinor = parseCurrencyAmount(form.minimumFee, currency);
+  const roadFactor = parseRoadFactor(form.roadFactor);
+
+  if (baseFeeMinor === null) errors.baseFee = "Enter a valid base fee.";
+  if (perKilometerMinor === null) errors.perKilometer = "Enter a valid per-kilometre rate.";
+  if (minimumFeeMinor === null) errors.minimumFee = "Enter a valid minimum fee.";
+  if (roadFactor === null) errors.roadFactor = "Use a road factor between 1.00 and 3.00.";
+
+  if (
+    baseFeeMinor === null ||
+    perKilometerMinor === null ||
+    minimumFeeMinor === null ||
+    roadFactor === null
+  ) {
+    return { model: null, errors };
   }
 
   return {
+    model: {
+      currency,
+      baseFeeMinor,
+      perKilometerMinor,
+      minimumFeeMinor,
+      roadFactor,
+    },
     errors,
-    parsed:
-      Object.keys(errors).length === 0 &&
-      cartValueCents !== null &&
-      latitude !== null &&
-      longitude !== null
-        ? { cartValueCents, latitude, longitude }
-        : null,
   };
 }
 
@@ -71,120 +113,136 @@ export default function Calculator() {
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [requestError, setRequestError] = useState("");
-  const [quote, setQuote] = useState<DeliveryQuote | null>(null);
-  const [recentQuotes, setRecentQuotes] = useState<RecentQuote[]>([]);
+  const [resolvedRoute, setResolvedRoute] = useState<ResolvedRoute | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
-  }, []);
+  const pricingState = useMemo(() => buildPricingModel(form), [form]);
 
-  const invalidateVisibleQuote = () => {
-    setQuote(null);
-    setRequestError("");
-  };
+  const selectedPickup = resolvedRoute
+    ? resolvedRoute.pickupMatches[resolvedRoute.pickupIndex]
+    : null;
+  const selectedDropoff = resolvedRoute
+    ? resolvedRoute.dropoffMatches[resolvedRoute.dropoffIndex]
+    : null;
+
+  const estimate = useMemo(() => {
+    if (!selectedPickup || !selectedDropoff || !pricingState.model) return null;
+
+    const straightLineMeters = calculateDistance(
+      selectedPickup.coordinates,
+      selectedDropoff.coordinates,
+    );
+    const international =
+      Boolean(selectedPickup.countryCode) &&
+      Boolean(selectedDropoff.countryCode) &&
+      selectedPickup.countryCode !== selectedDropoff.countryCode;
+
+    return calculateDeliveryEstimate(
+      straightLineMeters,
+      pricingState.model,
+      form.serviceLevel,
+      international,
+    );
+  }, [form.serviceLevel, pricingState.model, selectedDropoff, selectedPickup]);
 
   const setField = (field: keyof FormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined }));
-    invalidateVisibleQuote();
-  };
-
-  const applyPreset = (latitude: string, longitude: string) => {
-    setForm((current) => ({ ...current, latitude, longitude }));
-    setFieldErrors((current) => ({ ...current, latitude: undefined, longitude: undefined }));
-    invalidateVisibleQuote();
-  };
-
-  const resetExample = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setIsLoading(false);
-    setForm(DEFAULT_FORM);
-    setFieldErrors({});
     setRequestError("");
-    setQuote(null);
-  };
 
-  const handleLocation = () => {
-    setRequestError("");
-    if (!navigator.geolocation) {
-      setRequestError("Geolocation is not supported by this browser. Enter coordinates manually.");
-      return;
+    if (field === "fromQuery" || field === "toQuery") {
+      abortRef.current?.abort();
+      setResolvedRoute(null);
+      setIsLoading(false);
     }
+  };
 
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setForm((current) => ({
-          ...current,
-          latitude: position.coords.latitude.toFixed(6),
-          longitude: position.coords.longitude.toFixed(6),
-        }));
-        setFieldErrors((current) => ({ ...current, latitude: undefined, longitude: undefined }));
-        setQuote(null);
-        setRequestError("");
-        setIsLocating(false);
-      },
-      () => {
-        setRequestError("Location permission was unavailable. Your coordinates were not changed.");
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 60_000 },
+  const applyExample = (from: string, to: string) => {
+    abortRef.current?.abort();
+    setForm((current) => ({ ...current, fromQuery: from, toQuery: to }));
+    setFieldErrors((current) => ({
+      ...current,
+      fromQuery: undefined,
+      toQuery: undefined,
+    }));
+    setRequestError("");
+    setResolvedRoute(null);
+    setIsLoading(false);
+  };
+
+  const swapRoute = () => {
+    setForm((current) => ({
+      ...current,
+      fromQuery: current.toQuery,
+      toQuery: current.fromQuery,
+    }));
+
+    setResolvedRoute((current) =>
+      current
+        ? {
+            pickupMatches: current.dropoffMatches,
+            dropoffMatches: current.pickupMatches,
+            pickupIndex: current.dropoffIndex,
+            dropoffIndex: current.pickupIndex,
+          }
+        : null,
     );
   };
 
-  const handleCalculate = async (event: FormEvent<HTMLFormElement>) => {
+  const reset = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setForm(DEFAULT_FORM);
+    setFieldErrors({});
+    setRequestError("");
+    setResolvedRoute(null);
+    setIsLoading(false);
+  };
+
+  const handlePlan = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const validation = validateForm(form);
-    setFieldErrors(validation.errors);
+
+    const nextErrors: FieldErrors = {
+      fromQuery: validateQuery(form.fromQuery),
+      toQuery: validateQuery(form.toQuery),
+      ...pricingState.errors,
+    };
+    const compactErrors = Object.fromEntries(
+      Object.entries(nextErrors).filter(([, value]) => Boolean(value)),
+    ) as FieldErrors;
+
+    setFieldErrors(compactErrors);
     setRequestError("");
 
-    if (!validation.parsed) return;
+    if (Object.keys(compactErrors).length > 0 || !pricingState.model) {
+      return;
+    }
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    setQuote(null);
+    setResolvedRoute(null);
     setIsLoading(true);
 
     try {
-      const profile = await fetchVenueProfile(form.venueSlug.trim(), controller.signal);
-      const customerLocation = {
-        latitude: validation.parsed.latitude,
-        longitude: validation.parsed.longitude,
-      };
-      const distanceMeters = calculateDistance(customerLocation, profile.location);
-      const nextQuote = calculateDeliveryQuote(
-        profile,
-        { cartValueCents: validation.parsed.cartValueCents, customerLocation },
-        distanceMeters,
-      );
+      const [pickupMatches, dropoffMatches] = await Promise.all([
+        searchPlaces(form.fromQuery, controller.signal),
+        searchPlaces(form.toQuery, controller.signal),
+      ]);
 
-      setQuote(nextQuote);
-      setRecentQuotes((current) =>
-        [
-          {
-            id: `${Date.now()}-${Math.round(distanceMeters)}`,
-            totalCents: nextQuote.totalCents,
-            distanceMeters: nextQuote.distanceMeters,
-            cartValueCents: nextQuote.cartValueCents,
-            available: nextQuote.available,
-          },
-          ...current,
-        ].slice(0, 4),
-      );
+      setResolvedRoute({
+        pickupMatches,
+        dropoffMatches,
+        pickupIndex: 0,
+        dropoffIndex: 0,
+      });
     } catch (error) {
       if (controller.signal.aborted) return;
-      setQuote(null);
       setRequestError(
-        error instanceof VenueDataError
+        error instanceof GeocodingError
           ? error.message
-          : "The quote could not be calculated. Check the venue and try again.",
+          : "The route could not be resolved. Try again in a moment.",
       );
     } finally {
       if (abortRef.current === controller) {
@@ -201,206 +259,277 @@ export default function Calculator() {
           <span />
         </div>
         <div className="hero-copy">
-          <span className="eyebrow">Radius · Delivery Quote Lab</span>
-          <h1>Know the delivery cost before checkout does.</h1>
+          <span className="eyebrow">Radius · Global delivery planner</span>
+          <h1>From any place to any place — without coordinates.</h1>
           <p>
-            A transparent delivery-fee explorer built from a real home-assignment API: live venue rules,
-            local pricing math, and no hidden state.
+            Search addresses, landmarks, cities, or postal codes worldwide. Radius resolves the
+            places, models road distance, and applies a transparent pricing model locally.
           </p>
           <div className="trust-row" aria-label="Product principles">
-            <span>Live venue data</span>
+            <span>No GPS entry</span>
+            <span>No venue slug</span>
+            <span>Global place search</span>
             <span>Local calculation</span>
-            <span>No tracking</span>
           </div>
         </div>
       </header>
 
       <div className="workspace-grid">
-        <section className="composer-card" aria-labelledby="quote-builder-title">
+        <section className="composer-card" aria-labelledby="planner-title">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">Build a quote</span>
-              <h2 id="quote-builder-title">Delivery inputs</h2>
+              <span className="eyebrow">Plan a delivery</span>
+              <h2 id="planner-title">Route</h2>
             </div>
-            <button type="button" className="text-button" onClick={resetExample}>
-              Reset example
+            <button type="button" className="text-button" onClick={reset}>
+              Clear
             </button>
           </div>
 
-          <form onSubmit={handleCalculate} noValidate>
-            <label className="field-group">
-              <span>Venue slug</span>
-              <input
-                data-test-id="venueSlug"
-                value={form.venueSlug}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setField("venueSlug", event.target.value)
-                }
-                aria-invalid={Boolean(fieldErrors.venueSlug)}
-                aria-describedby={fieldErrors.venueSlug ? "venueSlug-error" : undefined}
-                autoComplete="off"
-                spellCheck={false}
-              />
-              {fieldErrors.venueSlug && (
-                <small id="venueSlug-error" className="field-error">
-                  {fieldErrors.venueSlug}
-                </small>
-              )}
-            </label>
-
-            <label className="field-group">
-              <span>Cart value</span>
-              <div className="money-input">
-                <span aria-hidden="true">€</span>
-                <input
-                  data-test-id="cartValue"
-                  inputMode="decimal"
-                  value={form.cartValue}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                    setField("cartValue", event.target.value)
-                  }
-                  aria-invalid={Boolean(fieldErrors.cartValue)}
-                  aria-describedby={fieldErrors.cartValue ? "cartValue-error" : "cartValue-help"}
-                />
-              </div>
-              <small id="cartValue-help" className="field-help">
-                Decimal comma or point both work.
-              </small>
-              {fieldErrors.cartValue && (
-                <small id="cartValue-error" className="field-error">
-                  {fieldErrors.cartValue}
-                </small>
-              )}
-            </label>
-
-            <fieldset className="location-fieldset">
-              <legend>Customer location</legend>
-              <div className="coordinate-grid">
-                <label className="field-group">
-                  <span>Latitude</span>
+          <form onSubmit={handlePlan} noValidate>
+            <div className="route-input-stack">
+              <label className="field-group route-field">
+                <span>From</span>
+                <div className="route-input-shell">
+                  <span className="route-dot route-dot--from" aria-hidden="true" />
                   <input
-                    data-test-id="userLatitude"
-                    inputMode="decimal"
-                    value={form.latitude}
+                    data-test-id="fromQuery"
+                    value={form.fromQuery}
                     onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                      setField("latitude", event.target.value)
+                      setField("fromQuery", event.target.value)
                     }
-                    aria-invalid={Boolean(fieldErrors.latitude)}
-                    aria-describedby={fieldErrors.latitude ? "latitude-error" : undefined}
+                    placeholder="Turku railway station, Finland"
+                    aria-invalid={Boolean(fieldErrors.fromQuery)}
+                    aria-describedby={fieldErrors.fromQuery ? "from-error" : undefined}
+                    autoComplete="off"
                   />
-                  {fieldErrors.latitude && (
-                    <small id="latitude-error" className="field-error">
-                      {fieldErrors.latitude}
-                    </small>
-                  )}
-                </label>
-                <label className="field-group">
-                  <span>Longitude</span>
-                  <input
-                    data-test-id="userLongitude"
-                    inputMode="decimal"
-                    value={form.longitude}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                      setField("longitude", event.target.value)
-                    }
-                    aria-invalid={Boolean(fieldErrors.longitude)}
-                    aria-describedby={fieldErrors.longitude ? "longitude-error" : undefined}
-                  />
-                  {fieldErrors.longitude && (
-                    <small id="longitude-error" className="field-error">
-                      {fieldErrors.longitude}
-                    </small>
-                  )}
-                </label>
-              </div>
-
-              <div className="location-actions">
-                <button
-                  data-test-id="getLocation"
-                  type="button"
-                  className="secondary-button"
-                  onClick={handleLocation}
-                  disabled={isLocating}
-                >
-                  {isLocating ? "Locating…" : "Use my location"}
-                </button>
-                <div className="preset-row" aria-label="Helsinki location presets">
-                  {LOCATION_PRESETS.map((preset) => (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      className="preset-button"
-                      onClick={() => applyPreset(preset.latitude, preset.longitude)}
-                    >
-                      {preset.name}
-                    </button>
-                  ))}
                 </div>
+                {fieldErrors.fromQuery && (
+                  <small id="from-error" className="field-error">
+                    {fieldErrors.fromQuery}
+                  </small>
+                )}
+              </label>
+
+              <button
+                className="swap-button"
+                type="button"
+                onClick={swapRoute}
+                aria-label="Swap pickup and drop-off"
+              >
+                ⇅
+              </button>
+
+              <label className="field-group route-field">
+                <span>To</span>
+                <div className="route-input-shell">
+                  <span className="route-dot route-dot--to" aria-hidden="true" />
+                  <input
+                    data-test-id="toQuery"
+                    value={form.toQuery}
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      setField("toQuery", event.target.value)
+                    }
+                    placeholder="Helsinki Airport, Finland"
+                    aria-invalid={Boolean(fieldErrors.toQuery)}
+                    aria-describedby={fieldErrors.toQuery ? "to-error" : undefined}
+                    autoComplete="off"
+                  />
+                </div>
+                {fieldErrors.toQuery && (
+                  <small id="to-error" className="field-error">
+                    {fieldErrors.toQuery}
+                  </small>
+                )}
+              </label>
+            </div>
+
+            <div className="example-row" aria-label="Route examples">
+              {ROUTE_EXAMPLES.map((example) => (
+                <button
+                  key={example.label}
+                  type="button"
+                  className="preset-button"
+                  onClick={() => applyExample(example.from, example.to)}
+                >
+                  {example.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="quick-settings">
+              <label className="field-group">
+                <span>Service</span>
+                <select
+                  data-test-id="serviceLevel"
+                  value={form.serviceLevel}
+                  onChange={(event) =>
+                    setField("serviceLevel", event.target.value as ServiceLevel)
+                  }
+                >
+                  <option value="economy">Economy</option>
+                  <option value="standard">Standard</option>
+                  <option value="express">Express</option>
+                </select>
+              </label>
+
+              <label className="field-group">
+                <span>Currency</span>
+                <input
+                  data-test-id="currency"
+                  className="currency-input"
+                  value={form.currency}
+                  onChange={(event) => setField("currency", event.target.value.toUpperCase())}
+                  maxLength={3}
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  aria-invalid={Boolean(fieldErrors.currency)}
+                  aria-describedby={fieldErrors.currency ? "currency-error" : undefined}
+                />
+                {fieldErrors.currency && (
+                  <small id="currency-error" className="field-error">
+                    {fieldErrors.currency}
+                  </small>
+                )}
+              </label>
+            </div>
+
+            <details className="pricing-details">
+              <summary>
+                <span>Pricing model</span>
+                <small>Optional · make it match your market</small>
+              </summary>
+              <div className="pricing-grid">
+                <label className="field-group">
+                  <span>Base fee</span>
+                  <input
+                    value={form.baseFee}
+                    inputMode="decimal"
+                    onChange={(event) => setField("baseFee", event.target.value)}
+                    aria-invalid={Boolean(fieldErrors.baseFee)}
+                  />
+                  {fieldErrors.baseFee && <small className="field-error">{fieldErrors.baseFee}</small>}
+                </label>
+                <label className="field-group">
+                  <span>Per km</span>
+                  <input
+                    value={form.perKilometer}
+                    inputMode="decimal"
+                    onChange={(event) => setField("perKilometer", event.target.value)}
+                    aria-invalid={Boolean(fieldErrors.perKilometer)}
+                  />
+                  {fieldErrors.perKilometer && (
+                    <small className="field-error">{fieldErrors.perKilometer}</small>
+                  )}
+                </label>
+                <label className="field-group">
+                  <span>Minimum fee</span>
+                  <input
+                    value={form.minimumFee}
+                    inputMode="decimal"
+                    onChange={(event) => setField("minimumFee", event.target.value)}
+                    aria-invalid={Boolean(fieldErrors.minimumFee)}
+                  />
+                  {fieldErrors.minimumFee && (
+                    <small className="field-error">{fieldErrors.minimumFee}</small>
+                  )}
+                </label>
+                <label className="field-group">
+                  <span>Road factor</span>
+                  <input
+                    value={form.roadFactor}
+                    inputMode="decimal"
+                    onChange={(event) => setField("roadFactor", event.target.value)}
+                    aria-invalid={Boolean(fieldErrors.roadFactor)}
+                  />
+                  {fieldErrors.roadFactor && (
+                    <small className="field-error">{fieldErrors.roadFactor}</small>
+                  )}
+                </label>
               </div>
-            </fieldset>
+              <p className="model-help">
+                Road factor converts straight-line distance into a planning road estimate. 1.25 means
+                roughly 25% longer than the air distance.
+              </p>
+            </details>
 
             {requestError && (
               <div className="error-banner" role="alert">
-                <strong>Quote unavailable</strong>
+                <strong>Couldn’t resolve this route</strong>
                 <span>{requestError}</span>
               </div>
             )}
 
             <button
-              data-test-id="calculateDeliveryPrice"
+              data-test-id="planDelivery"
               className="primary-button"
               type="submit"
               disabled={isLoading}
             >
-              <span>{isLoading ? "Reading venue rules…" : "Calculate delivery quote"}</span>
+              <span>{isLoading ? "Finding both places…" : "Plan delivery"}</span>
               <span aria-hidden="true">→</span>
             </button>
           </form>
         </section>
 
-        <aside className="context-card" aria-label="How Radius calculates the quote">
-          <span className="eyebrow">Pricing contract</span>
-          <h2>Three inputs become one inspectable total.</h2>
+        <aside className="context-card" aria-label="How Radius works">
+          <span className="eyebrow">No hidden provider rules</span>
+          <h2>Search globally. Price locally.</h2>
           <div className="formula-stack">
             <div>
               <span>01</span>
               <p>
-                <strong>Cart</strong>
-                <small>Your basket in integer cents.</small>
+                <strong>Resolve the places</strong>
+                <small>Names, addresses, landmarks, cities, or postal codes.</small>
               </p>
             </div>
             <div>
               <span>02</span>
               <p>
-                <strong>Distance</strong>
-                <small>Haversine distance from customer to venue.</small>
+                <strong>Model road distance</strong>
+                <small>Haversine distance × your road factor.</small>
               </p>
             </div>
             <div>
               <span>03</span>
               <p>
-                <strong>Venue rules</strong>
-                <small>Base fee, distance range and small-order threshold.</small>
+                <strong>Apply your pricing</strong>
+                <small>Base fee + distance rate + service level.</small>
               </p>
             </div>
           </div>
           <div className="architecture-note">
-            <span>Boundary design</span>
+            <span>Reliability boundary</span>
             <p>
-              API payloads are validated before they enter the pricing domain. UI state never owns
-              pricing rules.
+              Photon searches addresses first. Open-Meteo provides a city/postal-code fallback.
+              Pricing never depends on either service.
             </p>
           </div>
         </aside>
       </div>
 
-      {quote && <QuoteResult quote={quote} />}
-      <RecentQuotes quotes={recentQuotes} />
+      {resolvedRoute && estimate && pricingState.model && selectedPickup && selectedDropoff && (
+        <QuoteResult
+          estimate={estimate}
+          model={pricingState.model}
+          pickupMatches={resolvedRoute.pickupMatches}
+          dropoffMatches={resolvedRoute.dropoffMatches}
+          pickupIndex={resolvedRoute.pickupIndex}
+          dropoffIndex={resolvedRoute.dropoffIndex}
+          onPickupChange={(pickupIndex) =>
+            setResolvedRoute((current) => (current ? { ...current, pickupIndex } : current))
+          }
+          onDropoffChange={(dropoffIndex) =>
+            setResolvedRoute((current) => (current ? { ...current, dropoffIndex } : current))
+          }
+        />
+      )}
 
       <footer className="page-footer">
         <span>Radius</span>
         <p>
-          Home-assignment API data · client-side price calculation · precise coordinates are not stored.
+          Place search: Photon / OpenStreetMap, with Open-Meteo locality fallback. Planning estimates,
+          not carrier checkout prices.
         </p>
       </footer>
     </main>

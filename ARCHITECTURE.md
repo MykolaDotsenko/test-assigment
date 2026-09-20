@@ -1,111 +1,100 @@
 # Radius architecture
 
-Radius is intentionally small, but it treats **untrusted network data**, **money**, **distance pricing**, and **browser permissions** as real boundaries rather than component details.
+Radius is a small global delivery-planning application with one core rule: **network services may help resolve places, but they never own the pricing calculation.**
 
 ## Dependency direction
 
 ```text
 React UI
   |
-  +--> delivery domain <---- geo domain
+  +--> delivery estimate domain <---- geo domain
   |
-  +--> venue API adapter
+  +--> geocoding boundary
           |
-          +--> native Fetch / remote home-assignment API
+          +--> Photon / OpenStreetMap
+          |
+          +--> Open-Meteo locality fallback
 ```
 
-The domain does not import React, the DOM, geolocation, storage, or a network client.
+The pricing and geo domains do not import React, the DOM, storage, or a network client.
 
-## Responsibilities
+## Why the product changed
 
-### `src/domain/delivery.ts`
+The original home assignment depended on a development venue API, a venue slug, and explicit latitude/longitude fields. That made the demo fragile and Helsinki-specific.
 
-Owns the pricing contract:
+Radius v2 removes those constraints:
 
-- decimal-string to integer-cent parsing;
-- coordinate and venue-slug validation;
-- small-order surcharge;
-- distance-range selection;
-- `max = 0` unavailable sentinel handling;
-- distance fee formula;
-- available vs out-of-range quote state;
-- presentation-safe money/distance formatting.
+- no venue slug;
+- no manual GPS coordinates;
+- no browser geolocation permission;
+- no external pricing API;
+- no single-city assumptions.
 
-An unavailable delivery is represented explicitly with nullable fee/total fields. The domain never uses a magic negative delivery fee.
+Users describe pickup and drop-off in normal language. A provider boundary resolves those descriptions to candidate places, and the deterministic domain calculates the estimate locally.
 
-### `src/domain/geo.ts`
+## Geocoding boundary
 
-Owns the Haversine calculation. It is deterministic and browser-independent.
+### Primary: Photon
 
-### `src/services/venueApi.ts`
+Photon searches OpenStreetMap-backed place data and is well suited to addresses, landmarks, streets, cities, and other named places.
 
-Owns HTTP concerns and the trust boundary around the remote API.
+The app sends requests only after explicit form submission. It does not implement keystroke autocomplete. Successful results are cached in memory for the current page session.
 
-Both static and dynamic venue payloads are fetched in parallel with native Fetch. Unknown JSON is validated and normalized into one `VenueProfile` before pricing can consume it. HTTP failure, timeout, malformed data, invalid geographic coordinates, overlapping distance ranges, invalid finite ranges, and a misplaced open-ended sentinel are rejected at the boundary rather than leaking ambiguous state into pricing.
+### Fallback: Open-Meteo Geocoding
 
-### `src/components/Calculator.tsx`
+If Photon is unavailable or returns no result, Radius falls back to Open-Meteo's global locality/postal-code search.
 
-Owns orchestration only:
+This fallback is deliberately narrower than the primary provider: it improves resilience for city/postal-code searches without pretending to be a second full address engine.
 
-1. validate editable strings;
-2. invalidate any visible quote before a new pricing state is shown;
-3. cancel the previous in-flight quote;
-4. fetch a normalized venue profile;
-5. calculate distance;
-6. call the pricing domain;
-7. render success, out-of-range, or failure state.
+### Trust boundary
 
-Geolocation is a progressive convenience. Manual coordinates remain the resilient path.
+Both provider payloads are treated as unknown JSON. Coordinates, names, country codes, and result structure are normalized before the rest of the app can use them.
+
+## Pricing domain
+
+The user controls the market model:
+
+```text
+modeled road distance = air distance × road factor
+distance charge       = per-km rate × modeled road distance
+base quote            = max(minimum fee, base fee + distance charge)
+service quote         = base quote × service factor
+planning range        = route-class uncertainty around the service quote
+```
+
+The estimate is intentionally labeled as a **planning estimate**, not a carrier checkout price.
+
+Road factor is explicit because Radius does not claim to have turn-by-turn routing. This is more honest than inventing precise road mileage from straight-line coordinates.
 
 ## State rules
 
-- Form fields remain strings until submit so incomplete user input is not coerced into misleading numbers.
-- Money becomes integer cents before entering the pricing domain.
-- Any change to venue, cart, or customer location immediately invalidates the visible quote.
-- Reset aborts an in-flight request and clears quote/error state while preserving session history.
-- A new request aborts the previous request to prevent stale responses from winning a race.
-- Precise coordinates are not persisted.
-- Recent estimates are session-only presentation state.
-- Provider failure is distinct from a valid "outside delivery area" result.
+- route text stays human-readable;
+- changing From/To invalidates the resolved route immediately;
+- service and pricing-model changes recompute locally without another network request;
+- swapping a resolved route reuses the already-resolved candidates;
+- only explicit form submission performs geocoding;
+- in-flight searches are abortable;
+- no searched places are persisted to localStorage;
+- provider failure never corrupts the pricing domain.
 
 ## Runtime dependency policy
 
-The shipped application depends only on React and React DOM.
-
-No router, state library, API client, UI kit, CSS framework, map SDK, or animation runtime is justified by this one-screen workflow. Browser platform APIs are sufficient and keep the failure/supply-chain surface small.
+The shipped app depends only on React and React DOM. Native Fetch, AbortController, Intl, details/summary, and semantic HTML cover the remaining runtime needs.
 
 ## Test pyramid
 
 ```text
 Playwright + axe
-     ↑
-HTTP boundary mocked at browser level
-     ↑
-Vitest domain / provider normalization tests
-     ↑
-Pure pricing + geo functions
+      ↑
+deterministic mocked geocoding journeys
+      ↑
+provider-payload normalization tests
+      ↑
+pure pricing + geo domain tests
 ```
 
-The browser suite uses deterministic mocked provider responses so it can verify product behavior without coupling CI reliability to a third-party development API.
-
-Browser coverage explicitly checks successful quotes, stale-result invalidation, provider failure, outside-area behavior, client-side validation, accessibility, and responsive overflow.
-
-## Quality gate
-
-Pull requests and `main` run:
-
-```bash
-npm ci
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npx playwright install --with-deps chromium
-npm run test:e2e
-```
-
-The browser matrix covers desktop Chromium and a Pixel 7 profile. Axe checks the completed quote state for serious/critical WCAG A/AA regressions. Failures retain Playwright traces and screenshots where applicable.
+Browser tests cover successful planning, place ambiguity, fallback geocoding, validation, stale-route invalidation, accessibility, and mobile overflow.
 
 ## Deployment
 
-Vercel is the canonical deployment target and tracks `main`. The application has no deployment-time secrets and no server runtime.
+Vercel is the canonical deployment target and tracks `main`. The app requires no API key and no server runtime.

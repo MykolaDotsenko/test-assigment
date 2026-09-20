@@ -1,122 +1,182 @@
-import type { DeliveryQuote } from "../domain/delivery";
-import { formatCents, formatDistance } from "../domain/delivery";
+import {
+  formatDistance,
+  formatDuration,
+  formatMoney,
+  routeClassLabel,
+  serviceLabel,
+  type DeliveryEstimate,
+  type PricingModel,
+} from "../domain/delivery";
+import type { PlaceMatch } from "../services/geocoder";
 
 interface QuoteResultProps {
-  quote: DeliveryQuote;
+  estimate: DeliveryEstimate;
+  model: PricingModel;
+  pickupMatches: PlaceMatch[];
+  dropoffMatches: PlaceMatch[];
+  pickupIndex: number;
+  dropoffIndex: number;
+  onPickupChange: (index: number) => void;
+  onDropoffChange: (index: number) => void;
 }
 
-function BreakdownRow({ label, value, testId }: { label: string; value: string; testId?: string }) {
+function PlaceSelector({
+  label,
+  matches,
+  selectedIndex,
+  onChange,
+}: {
+  label: string;
+  matches: PlaceMatch[];
+  selectedIndex: number;
+  onChange: (index: number) => void;
+}) {
+  const selected = matches[selectedIndex];
+
   return (
-    <div className="breakdown-row">
+    <div className="resolved-place">
       <span>{label}</span>
-      <strong data-test-id={testId}>{value}</strong>
+      {matches.length > 1 ? (
+        <select
+          aria-label={`${label} resolved place`}
+          value={selectedIndex}
+          onChange={(event) => onChange(Number(event.target.value))}
+        >
+          {matches.map((match, index) => (
+            <option key={match.id} value={index}>
+              {match.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <strong>{selected.label}</strong>
+      )}
+      <small>
+        {selected.source === "photon" ? "Photon / OpenStreetMap" : "Open-Meteo / GeoNames"}
+      </small>
     </div>
   );
 }
 
-export default function QuoteResult({ quote }: QuoteResultProps) {
-  const distancePercent = Math.round((quote.distanceUtilization ?? 0) * 100);
+function BreakdownRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="breakdown-row">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+export default function QuoteResult({
+  estimate,
+  model,
+  pickupMatches,
+  dropoffMatches,
+  pickupIndex,
+  dropoffIndex,
+  onPickupChange,
+  onDropoffChange,
+}: QuoteResultProps) {
+  const pickup = pickupMatches[pickupIndex];
+  const dropoff = dropoffMatches[dropoffIndex];
 
   return (
-    <section className="result-card" aria-live="polite" aria-labelledby="quote-result-title">
+    <section className="result-card" aria-live="polite" aria-labelledby="estimate-title">
       <div className="result-heading-row">
         <div>
-          <span className={`status-pill ${quote.available ? "status-pill--positive" : "status-pill--warning"}`}>
-            {quote.available ? "Delivery available" : "Outside delivery area"}
-          </span>
-          <h2 id="quote-result-title">
-            {quote.available && quote.totalCents !== null
-              ? formatCents(quote.totalCents)
-              : "No delivery quote"}
+          <span className="status-pill status-pill--positive">Planning estimate</span>
+          <h2 id="estimate-title" data-test-id="estimateRange">
+            {formatMoney(estimate.feeLowMinor, model.currency)}
+            <span className="range-dash">–</span>
+            {formatMoney(estimate.feeHighMinor, model.currency)}
           </h2>
           <p>
-            {quote.available
-              ? "Live venue pricing, calculated locally and explained line by line."
-              : "The venue data is valid, but this location falls outside its configured delivery ranges."}
+            Transparent model range for planning. It is intentionally not presented as a carrier or
+            checkout price.
           </p>
         </div>
         <div className="distance-orbit" aria-hidden="true">
-          <span>{distancePercent}%</span>
-          <small>radius</small>
+          <span>{formatDistance(estimate.estimatedRoadMeters)}</span>
+          <small>modeled</small>
         </div>
       </div>
 
-      {quote.maxDeliveryDistanceMeters && (
-        <div className="distance-meter-block">
-          <div className="meter-labels">
-            <span>{formatDistance(quote.distanceMeters)} from venue</span>
-            <span>{formatDistance(quote.maxDeliveryDistanceMeters)} limit</span>
-          </div>
-          <meter
-            className="distance-meter"
-            min={0}
-            max={quote.maxDeliveryDistanceMeters}
-            value={Math.min(quote.distanceMeters, quote.maxDeliveryDistanceMeters)}
-          >
-            {distancePercent}%
-          </meter>
-        </div>
-      )}
+      <div className="resolved-grid">
+        <PlaceSelector
+          label="Resolved from"
+          matches={pickupMatches}
+          selectedIndex={pickupIndex}
+          onChange={onPickupChange}
+        />
+        <PlaceSelector
+          label="Resolved to"
+          matches={dropoffMatches}
+          selectedIndex={dropoffIndex}
+          onChange={onDropoffChange}
+        />
+      </div>
 
-      {quote.available && quote.deliveryFeeCents !== null && quote.totalCents !== null ? (
-        <div className="result-grid">
-          <div className="breakdown-panel">
-            <h3>Price anatomy</h3>
-            <BreakdownRow
-              label="Cart"
-              value={formatCents(quote.cartValueCents)}
-              testId="resultCartValue"
-            />
-            <BreakdownRow
-              label="Small-order surcharge"
-              value={formatCents(quote.smallOrderSurchargeCents)}
-              testId="smallOrderSurcharge"
-            />
-            <BreakdownRow
-              label="Delivery fee"
-              value={formatCents(quote.deliveryFeeCents)}
-              testId="deliveryFee"
-            />
-            <BreakdownRow
-              label="Delivery distance"
-              value={formatDistance(quote.distanceMeters)}
-              testId="deliveryDistance"
-            />
-            <div className="breakdown-total">
-              <span>Total</span>
-              <strong data-test-id="totalPrice">{formatCents(quote.totalCents)}</strong>
+      <div className="metric-grid">
+        <article>
+          <span>Road estimate</span>
+          <strong data-test-id="roadDistance">{formatDistance(estimate.estimatedRoadMeters)}</strong>
+          <small>air distance {formatDistance(estimate.straightLineMeters)}</small>
+        </article>
+        <article>
+          <span>ETA window</span>
+          <strong>
+            {formatDuration(estimate.etaMinMinutes)}–{formatDuration(estimate.etaMaxMinutes)}
+          </strong>
+          <small>{serviceLabel(estimate.serviceLevel)} planning speed</small>
+        </article>
+        <article>
+          <span>Route class</span>
+          <strong>{routeClassLabel(estimate.routeClass)}</strong>
+          <small>{estimate.international ? "Cross-border route" : "Same-country route"}</small>
+        </article>
+      </div>
+
+      <div className="result-grid">
+        <div className="breakdown-panel">
+          <h3>Price anatomy</h3>
+          <BreakdownRow label="Base fee" value={formatMoney(model.baseFeeMinor, model.currency)} />
+          <BreakdownRow
+            label="Distance charge"
+            value={formatMoney(estimate.distanceChargeMinor, model.currency)}
+          />
+          <BreakdownRow
+            label="Service factor"
+            value={`${serviceLabel(estimate.serviceLevel)} ×${estimate.serviceMultiplier.toFixed(2)}`}
+          />
+          <BreakdownRow
+            label="Minimum fee"
+            value={formatMoney(model.minimumFeeMinor, model.currency)}
+          />
+          <div className="breakdown-total">
+            <span>Model midpoint</span>
+            <strong data-test-id="estimateMidpoint">
+              {formatMoney(estimate.feeMidMinor, model.currency)}
+            </strong>
+          </div>
+        </div>
+
+        <div className="insight-panel">
+          <span className="eyebrow">What this means</span>
+          <h3>{pickup.name} → {dropoff.name}</h3>
+          <p>
+            Radius uses a configurable road factor instead of pretending it has turn-by-turn routing.
+            The wider price range absorbs some of that uncertainty while keeping the formula inspectable.
+          </p>
+          {estimate.international && (
+            <div className="route-warning">
+              <strong>Cross-border route</strong>
+              <span>
+                Customs, tolls, taxes, carrier zones, and border delays are not included in this model.
+              </span>
             </div>
-          </div>
-
-          <div className="insight-panel">
-            <span className="eyebrow">Next best move</span>
-            {quote.amountUntilNoSurchargeCents > 0 ? (
-              <>
-                <h3>Add {formatCents(quote.amountUntilNoSurchargeCents)} to the cart</h3>
-                <p>
-                  That removes the small-order surcharge. The calculator keeps this signal separate from
-                  the delivery fee so the pricing rule stays inspectable.
-                </p>
-              </>
-            ) : (
-              <>
-                <h3>No small-order surcharge</h3>
-                <p>
-                  The cart already meets the venue threshold. Your total is the cart value plus the
-                  distance-based delivery fee.
-                </p>
-              </>
-            )}
-          </div>
+          )}
         </div>
-      ) : (
-        <div className="outside-note">
-          <strong>Try a closer location.</strong>
-          <span>
-            Your cart is still valid; only the delivery-distance rule prevents a quote for this point.
-          </span>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

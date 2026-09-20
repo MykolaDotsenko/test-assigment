@@ -1,83 +1,90 @@
-# Radius — Delivery Quote Lab
+# Radius — Global Delivery Planner
 
 [![Quality](https://github.com/MykolaDotsenko/test-assigment/actions/workflows/quality.yml/badge.svg)](https://github.com/MykolaDotsenko/test-assigment/actions/workflows/quality.yml)
 
-**A transparent delivery-fee explorer rebuilt from a small React/TypeScript home assignment into a production-minded frontend case study.**
+**Search two places anywhere in the world, resolve them from normal human text, and apply a transparent delivery-pricing model locally.**
 
 [**Open the live app →**](https://test-assigment-theta.vercel.app) · [Architecture](./ARCHITECTURE.md) · [Browser tests](./e2e/radius.spec.ts)
 
-Radius answers one practical question: **what will this delivery cost, and why?**
+## What changed
 
-Instead of treating the assignment as a form that prints five numbers, the product exposes the pricing contract: cart threshold, customer-to-venue distance, delivery range, fee composition, availability, and the next useful action when a small-order surcharge applies.
+Radius started as a Helsinki-specific delivery home assignment that required a venue slug and explicit latitude/longitude values. That was useful for demonstrating one provider contract, but it was not a reliable product.
+
+Radius v2 removes the provider lock-in:
+
+- no venue slug;
+- no manual GPS fields;
+- no browser location permission;
+- no external pricing API;
+- no single-country assumptions.
+
+Users type normal place descriptions such as:
+
+- `Turku railway station, Finland`
+- `Helsinki Airport, Finland`
+- `JFK Airport, New York`
+- `Potsdam, Germany`
+- a street address, landmark, city, or postal code
 
 ## Product capabilities
 
-- live venue static + dynamic pricing data
-- integer-cent cart parsing with decimal comma and decimal point support
-- manual coordinates or browser geolocation
-- quick Helsinki location presets for exploration
-- Haversine customer-to-venue distance
-- explicit delivery-range utilization
-- available vs outside-delivery-area product states
-- small-order threshold insight: exactly how much to add to remove the surcharge
-- inspectable cart / surcharge / delivery / distance / total breakdown
-- immediate stale-quote invalidation whenever a pricing input or location changes
-- previous request cancellation so stale responses cannot overwrite a newer quote
-- session-only recent estimates without persisting precise coordinates
-- responsive desktop/mobile layout
-- reduced-motion and forced-colors fallbacks
-- no analytics or tracking
+- global forward geocoding through Photon / OpenStreetMap
+- Open-Meteo locality/postal-code fallback when the primary search is unavailable or empty
+- candidate selection when a place query is ambiguous
+- Haversine air distance
+- configurable road-distance factor
+- user-controlled currency, base fee, per-km rate, and minimum fee
+- Economy / Standard / Express service profiles
+- local / metro / regional / long-distance route classification
+- planning fee range instead of false single-number precision
+- ETA planning window
+- cross-border warning without inventing customs/tax data
+- route swap without a second lookup
+- in-memory query cache
+- abortable place searches
+- responsive mobile-first UX
+- reduced-motion and forced-colors support
+- no analytics and no persistent location history
 
-## Why this project is different
+## Reliability model
 
-The original implementation had the core formula, but network fetching, geolocation, validation, pricing, and UI state all lived in one component. The single test submitted the form without asserting the result, and the README was still the default Vite template.
+The previous version could fail completely when the remote venue-pricing API was unavailable.
 
-The rebuild keeps the original problem and makes the engineering decisions visible:
+The current version separates concerns:
 
 ```text
-React UI
-   |
-   +----> delivery domain <---- geo domain
-   |
-   +----> validated venue API adapter
-                 |
-                 +----> Fetch API / remote assignment API
+place search may fail
+        ↓
+pricing domain still remains deterministic and independent
+
+Photon search
+    ↓ fallback
+Open-Meteo locality search
+    ↓
+normalized places
+    ↓
+Haversine + road factor
+    ↓
+local pricing model
 ```
 
-The important boundaries are deliberate:
-
-- **Money enters the domain as integer cents**, not floating-point UI state.
-- **Remote JSON is treated as untrusted** and normalized before pricing uses it.
-- **Distance ranges are validated as a contract**: finite ranges must be valid, ranges may not overlap, and an open-ended `max = 0` sentinel may appear only at the end.
-- **Provider failure and out-of-range delivery are different states.**
-- **Editable form values remain strings** until submit, so partial input is not coerced into misleading numbers.
-- **Visible quotes are invalidated immediately** when price-affecting inputs change, so the UI never presents a total for different inputs.
-- **In-flight requests are abortable**, protecting the interface from response races.
-- **Precise coordinates are never persisted.**
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full dependency rules and state contract.
+Network access is used only to translate human place descriptions into coordinates. Once both places are resolved, service-level and pricing changes are recalculated locally.
 
 ## Pricing model
 
-For a valid distance range, the home-assignment pricing formula is preserved:
+Radius does **not** pretend to know the real checkout price of every courier in every country.
+
+Instead, it provides an inspectable planning model:
 
 ```text
-delivery fee = base price + a + round(b × distance / 10)
+modeled road distance = air distance × road factor
+distance charge       = per-km rate × modeled road distance
+base quote            = max(minimum fee, base fee + distance charge)
+service quote         = base quote × service factor
+planning range        = uncertainty band based on route scale
 ```
 
-The small-order surcharge is:
-
-```text
-max(0, order minimum without surcharge - cart value)
-```
-
-And the quoted total is:
-
-```text
-cart value + small-order surcharge + delivery fee
-```
-
-Distance is calculated with the Haversine formula using the customer and venue coordinates.
+The default values are only a demo baseline. Open **Pricing model** to match a local market or business.
 
 ## Stack
 
@@ -87,17 +94,18 @@ Distance is calculated with the Haversine formula using the customer and venue c
 - TypeScript 6
 - Vite 8
 - native Fetch + AbortController
-- Geolocation API
-- Intl formatting APIs
+- Intl currency formatting
 - custom responsive CSS
+- Photon geocoding
+- Open-Meteo geocoding fallback
 
-Runtime dependencies are only **React and React DOM**. Radius deliberately has no API client package, router, state library, UI kit, animation runtime, map SDK, analytics SDK, or CSS framework.
+Runtime dependencies remain only **React and React DOM**.
 
-### Verification and delivery
+### Verification
 
 - Vitest 5
 - Playwright 1.63
-- axe-core browser accessibility checks
+- axe-core accessibility checks
 - ESLint 10
 - strict TypeScript
 - GitHub Actions on Node 24
@@ -106,62 +114,36 @@ Runtime dependencies are only **React and React DOM**. Radius deliberately has n
 
 ## Quality evidence
 
-Pure tests cover the behavior most likely to produce expensive regressions:
+Pure tests verify:
 
-- decimal money parsing without floating-point input drift
-- coordinate boundaries
-- venue-slug normalization
-- small-order surcharge arithmetic
-- distance-range matching
-- finite range validity, overlap prevention, and terminal-sentinel rules
-- delivery-fee calculation
-- explicit out-of-range quotes
-- Haversine invariants and a real Helsinki distance sanity check
-- malformed static/dynamic provider payloads
+- multi-currency decimal precision
+- JPY zero-decimal handling
+- road-factor validation
+- route classification
+- deterministic fee ranges
+- minimum-fee floor
+- international-route semantics
+- Haversine invariants
+- Photon GeoJSON normalization
+- Open-Meteo fallback normalization
+- malformed coordinate rejection
 
-Browser tests mock the remote provider at the HTTP boundary and verify:
+Browser tests verify:
 
-- a complete deterministic quote journey
-- stale quote removal when inputs change
-- a valid outside-delivery-area result
-- bounded provider HTTP errors
-- validation before any provider request
-- serious/critical WCAG A/AA regressions with axe
-- horizontal-overflow protection on desktop and mobile Chromium
+- global route planning from human-readable place names
+- ambiguous-result selectors
+- stale route removal after editing From/To
+- Photon failure → Open-Meteo fallback
+- validation before any network request
+- serious/critical WCAG A/AA regression checks
+- horizontal-overflow protection on desktop and Pixel 7
 
-CI runs the static gate and browser suite on pull requests and `main`:
+## Data sources
 
-```text
-ESLint
-→ TypeScript
-→ Vitest
-→ Vite production build
-→ Chromium install
-→ Playwright desktop + Pixel 7 profile
-→ axe accessibility checks
-```
+- Photon provides OpenStreetMap-backed forward geocoding: https://github.com/komoot/photon
+- Open-Meteo provides the city/postal-code fallback: https://open-meteo.com/en/docs/geocoding-api
 
-The production alias is **https://test-assigment-theta.vercel.app** and is deployed from the repository's `main` branch.
-
-## Accessibility and UX
-
-Radius uses native browser semantics before custom interaction code:
-
-- visible labels for every field
-- grouped coordinates via `fieldset` / `legend`
-- `aria-invalid` and field-specific error relationships
-- `role="alert"` for request failures
-- `aria-live` for quote results
-- native `meter` for distance utilization
-- keyboard-operable presets and actions
-- visible `:focus-visible` states
-- reduced-motion support
-- forced-colors fallback
-- no color-only distinction between available and unavailable states
-
-## Privacy boundary
-
-Browser geolocation is optional. If the user grants access, coordinates are used only to calculate the current quote. **Precise coordinates are not stored in localStorage, analytics, or a backend.** Recent estimates retain only cart value, distance, total, and availability for the current page session.
+Searches happen only after the user presses **Plan delivery**. The app does not send keystrokes to a provider and does not persist searched places.
 
 ## Run locally
 
@@ -170,13 +152,13 @@ npm ci
 npm run dev
 ```
 
-Run all static/unit checks:
+Run the static/unit quality gate:
 
 ```bash
 npm run check
 ```
 
-Install the browser once and run the end-to-end suite:
+Install Chromium once and run browser verification:
 
 ```bash
 npx playwright install chromium
@@ -186,7 +168,3 @@ npm run test:e2e
 ## License
 
 MIT. See [LICENSE](./LICENSE).
-
-## Repository evolution
-
-This repository intentionally preserves its origin as a technical assignment. The rebuild does not disguise that history. It demonstrates the follow-through expected in production work: model the domain explicitly, minimize the runtime surface, validate unreliable boundaries, design useful states, test the rules in isolation and in a browser, document the trade-offs, and ship a product surface that explains itself.

@@ -3,163 +3,217 @@ export interface Coordinates {
   longitude: number;
 }
 
-export interface DistanceRange {
-  min: number;
-  max: number;
-  a: number;
-  b: number;
+export type ServiceLevel = "economy" | "standard" | "express";
+export type RouteClass = "local" | "metro" | "regional" | "long-distance";
+
+export interface PricingModel {
+  currency: string;
+  baseFeeMinor: number;
+  perKilometerMinor: number;
+  minimumFeeMinor: number;
+  roadFactor: number;
 }
 
-export interface VenueProfile {
-  slug: string;
-  location: Coordinates;
-  orderMinimumNoSurcharge: number;
-  basePrice: number;
-  distanceRanges: DistanceRange[];
+export interface DeliveryEstimate {
+  straightLineMeters: number;
+  estimatedRoadMeters: number;
+  routeClass: RouteClass;
+  serviceLevel: ServiceLevel;
+  serviceMultiplier: number;
+  distanceChargeMinor: number;
+  feeMidMinor: number;
+  feeLowMinor: number;
+  feeHighMinor: number;
+  etaMinMinutes: number;
+  etaMaxMinutes: number;
+  international: boolean;
 }
 
-export interface DeliveryQuote {
-  available: boolean;
-  cartValueCents: number;
-  smallOrderSurchargeCents: number;
-  deliveryFeeCents: number | null;
-  totalCents: number | null;
-  distanceMeters: number;
-  maxDeliveryDistanceMeters: number | null;
-  distanceUtilization: number | null;
-  amountUntilNoSurchargeCents: number;
-  matchedRange: DistanceRange | null;
+interface ServiceProfile {
+  multiplier: number;
+  localSpeedKmh: number;
+  longDistanceSpeedKmh: number;
+  pickupMinMinutes: number;
+  pickupMaxMinutes: number;
 }
 
-export interface QuoteInput {
-  cartValueCents: number;
-  customerLocation: Coordinates;
-}
+const SERVICE_PROFILES: Record<ServiceLevel, ServiceProfile> = {
+  economy: {
+    multiplier: 0.85,
+    localSpeedKmh: 19,
+    longDistanceSpeedKmh: 62,
+    pickupMinMinutes: 18,
+    pickupMaxMinutes: 32,
+  },
+  standard: {
+    multiplier: 1,
+    localSpeedKmh: 27,
+    longDistanceSpeedKmh: 72,
+    pickupMinMinutes: 12,
+    pickupMaxMinutes: 24,
+  },
+  express: {
+    multiplier: 1.35,
+    localSpeedKmh: 36,
+    longDistanceSpeedKmh: 82,
+    pickupMinMinutes: 8,
+    pickupMaxMinutes: 16,
+  },
+};
 
-export function parseMoneyToCents(raw: string): number | null {
-  const normalized = raw.trim().replace(",", ".");
+export function getCurrencyFractionDigits(currency: string): number | null {
+  try {
+    const digits = new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: currency.trim().toUpperCase(),
+    }).resolvedOptions().maximumFractionDigits;
 
-  if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) {
+    return Math.min(3, Math.max(0, digits));
+  } catch {
     return null;
   }
+}
+
+export function isCurrencyCodeValid(currency: string): boolean {
+  const normalized = currency.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) && getCurrencyFractionDigits(normalized) !== null;
+}
+
+export function parseCurrencyAmount(raw: string, currency: string): number | null {
+  const digits = getCurrencyFractionDigits(currency);
+  if (digits === null) return null;
+
+  const normalized = raw.trim().replace(",", ".");
+  const pattern =
+    digits === 0 ? /^\d+$/ : new RegExp(`^\\d+(?:\\.\\d{0,${digits}})?$`);
+
+  if (!pattern.test(normalized)) return null;
 
   const [whole, fraction = ""] = normalized.split(".");
-  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  const factor = 10 ** digits;
+  const amount = Number(whole) * factor + Number(fraction.padEnd(digits, "0"));
 
-  if (!Number.isSafeInteger(cents) || cents < 0 || cents > 100_000_000) {
+  if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1_000_000_000) {
     return null;
   }
 
-  return cents;
+  return amount;
 }
 
-export function parseCoordinate(raw: string, kind: "latitude" | "longitude"): number | null {
+export function parseRoadFactor(raw: string): number | null {
   const value = Number(raw.trim().replace(",", "."));
-  const min = kind === "latitude" ? -90 : -180;
-  const max = kind === "latitude" ? 90 : 180;
-
-  if (!Number.isFinite(value) || value < min || value > max) {
-    return null;
-  }
-
+  if (!Number.isFinite(value) || value < 1 || value > 3) return null;
   return value;
 }
 
-export function isVenueSlugValid(value: string): boolean {
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.trim()) && value.trim().length <= 120;
+export function classifyRoute(estimatedRoadMeters: number): RouteClass {
+  const kilometers = estimatedRoadMeters / 1000;
+  if (kilometers < 5) return "local";
+  if (kilometers < 20) return "metro";
+  if (kilometers < 100) return "regional";
+  return "long-distance";
 }
 
-export function calcSmallOrderSurcharge(cartValueCents: number, orderMinimumCents: number): number {
-  return Math.max(0, orderMinimumCents - cartValueCents);
-}
-
-export function getMaxDeliveryDistance(distanceRanges: DistanceRange[]): number | null {
-  const unavailableSentinel = distanceRanges.find((range) => range.max === 0);
-  if (unavailableSentinel) return unavailableSentinel.min;
-
-  const finiteMaxima = distanceRanges.map((range) => range.max).filter((max) => max > 0);
-  return finiteMaxima.length > 0 ? Math.max(...finiteMaxima) : null;
-}
-
-export function findDistanceRange(distanceMeters: number, ranges: DistanceRange[]): DistanceRange | null {
-  for (const range of ranges) {
-    if (range.max === 0 && distanceMeters >= range.min) {
-      return null;
-    }
-
-    if (range.max > 0 && distanceMeters >= range.min && distanceMeters < range.max) {
-      return range;
-    }
-  }
-
-  return null;
-}
-
-export function calculateDeliveryFee(
-  basePriceCents: number,
-  distanceMeters: number,
-  range: DistanceRange,
-): number {
-  return basePriceCents + range.a + Math.round((range.b * distanceMeters) / 10);
-}
-
-export function calculateDeliveryQuote(
-  profile: VenueProfile,
-  input: QuoteInput,
-  distanceMeters: number,
-): DeliveryQuote {
-  const roundedDistance = Math.max(0, Math.round(distanceMeters));
-  const matchedRange = findDistanceRange(roundedDistance, profile.distanceRanges);
-  const smallOrderSurchargeCents = calcSmallOrderSurcharge(
-    input.cartValueCents,
-    profile.orderMinimumNoSurcharge,
+export function calculateDeliveryEstimate(
+  straightLineMeters: number,
+  model: PricingModel,
+  serviceLevel: ServiceLevel,
+  international = false,
+): DeliveryEstimate {
+  const safeStraightMeters = Math.max(0, straightLineMeters);
+  const estimatedRoadMeters = Math.max(
+    safeStraightMeters,
+    Math.round(safeStraightMeters * model.roadFactor),
   );
-  const maxDeliveryDistanceMeters = getMaxDeliveryDistance(profile.distanceRanges);
-  const distanceUtilization = maxDeliveryDistanceMeters
-    ? Math.min(1, roundedDistance / maxDeliveryDistanceMeters)
-    : null;
+  const estimatedRoadKilometers = estimatedRoadMeters / 1000;
+  const profile = SERVICE_PROFILES[serviceLevel];
+  const routeClass = classifyRoute(estimatedRoadMeters);
 
-  if (!matchedRange) {
-    return {
-      available: false,
-      cartValueCents: input.cartValueCents,
-      smallOrderSurchargeCents,
-      deliveryFeeCents: null,
-      totalCents: null,
-      distanceMeters: roundedDistance,
-      maxDeliveryDistanceMeters,
-      distanceUtilization,
-      amountUntilNoSurchargeCents: smallOrderSurchargeCents,
-      matchedRange: null,
-    };
-  }
+  const distanceChargeMinor = Math.round(model.perKilometerMinor * estimatedRoadKilometers);
+  const beforeService = Math.max(
+    model.minimumFeeMinor,
+    model.baseFeeMinor + distanceChargeMinor,
+  );
+  const feeMidMinor = Math.max(
+    model.minimumFeeMinor,
+    Math.round(beforeService * profile.multiplier),
+  );
 
-  const deliveryFeeCents = calculateDeliveryFee(profile.basePrice, roundedDistance, matchedRange);
+  const uncertainty =
+    routeClass === "local"
+      ? { low: 0.92, high: 1.12 }
+      : routeClass === "metro"
+        ? { low: 0.9, high: 1.16 }
+        : routeClass === "regional"
+          ? { low: 0.85, high: 1.25 }
+          : { low: 0.75, high: 1.4 };
+
+  const feeLowMinor = Math.max(
+    model.minimumFeeMinor,
+    Math.round(feeMidMinor * uncertainty.low),
+  );
+  const feeHighMinor = Math.max(feeLowMinor, Math.round(feeMidMinor * uncertainty.high));
+
+  const speedKmh =
+    estimatedRoadKilometers > 50 ? profile.longDistanceSpeedKmh : profile.localSpeedKmh;
+  const driveMinutes = speedKmh > 0 ? (estimatedRoadKilometers / speedKmh) * 60 : 0;
+
+  const etaMinMinutes = Math.max(
+    10,
+    Math.round(driveMinutes * 0.88 + profile.pickupMinMinutes),
+  );
+  const etaMaxMinutes = Math.max(
+    etaMinMinutes + 5,
+    Math.round(driveMinutes * 1.28 + profile.pickupMaxMinutes),
+  );
 
   return {
-    available: true,
-    cartValueCents: input.cartValueCents,
-    smallOrderSurchargeCents,
-    deliveryFeeCents,
-    totalCents: input.cartValueCents + smallOrderSurchargeCents + deliveryFeeCents,
-    distanceMeters: roundedDistance,
-    maxDeliveryDistanceMeters,
-    distanceUtilization,
-    amountUntilNoSurchargeCents: smallOrderSurchargeCents,
-    matchedRange,
+    straightLineMeters: Math.round(safeStraightMeters),
+    estimatedRoadMeters,
+    routeClass,
+    serviceLevel,
+    serviceMultiplier: profile.multiplier,
+    distanceChargeMinor,
+    feeMidMinor,
+    feeLowMinor,
+    feeHighMinor,
+    etaMinMinutes,
+    etaMaxMinutes,
+    international,
   };
 }
 
-export function formatCents(cents: number): string {
-  return new Intl.NumberFormat("en-FI", {
+export function formatMoney(amountMinor: number, currency: string): string {
+  const normalized = currency.trim().toUpperCase();
+  const digits = getCurrencyFractionDigits(normalized) ?? 2;
+  return new Intl.NumberFormat(undefined, {
     style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(cents / 100);
+    currency: normalized,
+  }).format(amountMinor / 10 ** digits);
 }
 
 export function formatDistance(meters: number): string {
-  if (meters < 1000) return `${meters} m`;
-  return `${(meters / 1000).toFixed(meters >= 10_000 ? 0 : 1)} km`;
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  const kilometers = meters / 1000;
+  return `${kilometers.toFixed(kilometers >= 100 ? 0 : kilometers >= 10 ? 1 : 2)} km`;
+}
+
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
+export function serviceLabel(level: ServiceLevel): string {
+  if (level === "economy") return "Economy";
+  if (level === "express") return "Express";
+  return "Standard";
+}
+
+export function routeClassLabel(routeClass: RouteClass): string {
+  if (routeClass === "local") return "Local";
+  if (routeClass === "metro") return "Metro";
+  if (routeClass === "regional") return "Regional";
+  return "Long-distance";
 }
