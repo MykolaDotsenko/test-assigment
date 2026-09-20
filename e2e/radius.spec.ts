@@ -26,6 +26,7 @@ test("business mode exposes PostNord list-rate calculations", async ({ page }) =
   await expect(results.getByText("Contract list calculation").first()).toBeVisible();
   await expect(results.getByText("Matkahuolto")).toHaveCount(0);
   await expect(results.getByText("GLS Finland")).toHaveCount(0);
+  await results.getByText("Calculation details").first().click();
   await expect(results.getByText(/Fuel surcharge: 10\.4%/).first()).toBeVisible();
 });
 
@@ -52,6 +53,7 @@ test("supports Åland route without asking for a postcode or GPS", async ({ page
 
   const results = page.locator('[data-test-id="results"]');
   await expect(results.getByText("Mainland Finland ↔ Åland")).toBeVisible();
+  await results.getByText("Calculation details").first().click();
   await expect(results.getByText("Åland tariff applied")).toBeVisible();
 });
 
